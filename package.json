@@ -1,6 +1,6 @@
 {
 	"name": "hex-to-oklch",
-	"version": "1.0.0-rc.0",
+	"version": "1.0.0",
 	"description": "Tiny, zero-dependency hex-to-OKLCH color converter",
 	"keywords": [
 		"hex",
@@ -48,5 +48,6 @@
 		"@typescript/native-preview": "^7.0.0-dev.20260226.1",
 		"dprint": "^0.52.0",
 		"tsdown": "^0.21.0-beta.2"
-	}
+	},
+	"packageManager": "bun@1.3.10"
 }
