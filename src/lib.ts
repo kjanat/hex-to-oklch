@@ -10,7 +10,8 @@ export type Oklch = {
 
 /**
  * Parse a hex color string into sRGB components (0-1).
- * Accepts #RGB, #RRGGBB, #RGBA, #RRGGBBAA (alpha is discarded).
+ *
+ * Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA` (alpha is discarded).
  */
 function parseHex(hex: string): [r: number, g: number, b: number] {
 	const s = hex.startsWith('#') ? hex.slice(1) : hex;
@@ -72,7 +73,7 @@ function linearSrgbToOklab(
 	];
 }
 
-/** Convert a hex color string to OKLCH. Accepts #RGB, #RRGGBB, #RGBA, #RRGGBBAA. */
+/** Convert a hex color string to OKLCH. Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA`. */
 export function hexToOklch(hex: string): Oklch {
 	const [r, g, b] = parseHex(hex);
 	const [L, a, ob] = linearSrgbToOklab(

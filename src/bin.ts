@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-import { formatOklch, hexToOklch } from './index.ts';
+import { formatOklch, hexToOklch } from './lib.ts';
 
 const input = process.argv[2];
 

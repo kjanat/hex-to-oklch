@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig([{
-	entry: { index: 'src/index.ts' },
+	entry: { lib: 'src/lib.ts' },
 	format: ['esm'],
 	dts: true,
 	unbundle: false,
@@ -11,4 +11,5 @@ export default defineConfig([{
 	treeshake: true,
 	unbundle: true,
 	dts: false,
+	banner: '#!/usr/bin/env node',
 }]);

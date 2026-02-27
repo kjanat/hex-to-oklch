@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { Oklch } from './index.ts';
-import { formatOklch, hexToOklch } from './index.ts';
+import type { Oklch } from './lib.ts';
+import { formatOklch, hexToOklch } from './lib.ts';
 
 // ---------------------------------------------------------------------------
 // Helpers
