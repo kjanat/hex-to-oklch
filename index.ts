@@ -51,7 +51,8 @@ function srgbToLinear(c: number): number {
 
 /**
  * Convert linear sRGB to OKLab.
- * Matrices from Björn Ottosson: https://bottosson.github.io/posts/oklab/
+ *
+ * Matrices from Björn Ottosson @see {@link https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab}
  */
 function linearSrgbToOklab(
 	r: number,
