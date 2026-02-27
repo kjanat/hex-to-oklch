@@ -38,16 +38,32 @@ describe('parsing', () => {
 		expectOklchClose(hexToOklch('#123'), hexToOklch('#112233'));
 	});
 
-	test('#RRGGBBAA — alpha discarded', () => {
-		expectOklchClose(hexToOklch('#ff000000'), hexToOklch('#ff0000'));
-		expectOklchClose(hexToOklch('#ff000080'), hexToOklch('#ff0000'));
-		expectOklchClose(hexToOklch('#ff0000ff'), hexToOklch('#ff0000'));
+	test('#RRGGBBAA — alpha preserved', () => {
+		const noAlpha = hexToOklch('#ff0000');
+		const transparent = hexToOklch('#ff000000');
+		const mid = hexToOklch('#ff000080');
+		const full = hexToOklch('#ff0000ff');
+
+		expectOklchClose(transparent, noAlpha);
+		expectOklchClose(mid, noAlpha);
+		expectOklchClose(full, noAlpha);
+		expect(transparent.a).toBe(0);
+		expect(mid.a).toBeCloseTo(128 / 255, 10);
+		expect(full.a).toBe(1);
 	});
 
-	test('#RGBA — alpha discarded', () => {
-		expectOklchClose(hexToOklch('#f000'), hexToOklch('#ff0000'));
-		expectOklchClose(hexToOklch('#f008'), hexToOklch('#ff0000'));
-		expectOklchClose(hexToOklch('#f00f'), hexToOklch('#ff0000'));
+	test('#RGBA — alpha preserved', () => {
+		const noAlpha = hexToOklch('#ff0000');
+		const transparent = hexToOklch('#f000');
+		const mid = hexToOklch('#f008');
+		const full = hexToOklch('#f00f');
+
+		expectOklchClose(transparent, noAlpha);
+		expectOklchClose(mid, noAlpha);
+		expectOklchClose(full, noAlpha);
+		expect(transparent.a).toBe(0);
+		expect(mid.a).toBeCloseTo(136 / 255, 10);
+		expect(full.a).toBe(1);
 	});
 
 	test('case insensitive', () => {
@@ -269,6 +285,10 @@ describe('invariants', () => {
 		expect(base.h).toBe(noAlpha.h);
 		expect(mid.l).toBe(noAlpha.l);
 		expect(full.l).toBe(noAlpha.l);
+		expect(base.a).toBe(0);
+		expect(mid.a).toBeCloseTo(128 / 255, 10);
+		expect(full.a).toBe(1);
+		expect(noAlpha.a).toBeUndefined();
 	});
 });
 
@@ -282,10 +302,16 @@ describe('formatOklch', () => {
 		expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? \d+(\.\d+)?\)$/);
 	});
 
+	test('produces valid CSS oklch() syntax with alpha', () => {
+		const s = formatOklch(hexToOklch('#ff000080'));
+		expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? \d+(\.\d+)? \/ \d+(\.\d+)?\)$/);
+	});
+
 	test('known outputs', () => {
 		expect(formatOklch(hexToOklch('#000000'))).toBe('oklch(0% 0 0)');
 		expect(formatOklch(hexToOklch('#ffffff'))).toBe('oklch(100% 0 0)');
 		expect(formatOklch(hexToOklch('#ff0000'))).toBe('oklch(62.8% 0.2577 29.23)');
+		expect(formatOklch(hexToOklch('#ff000080'))).toBe('oklch(62.8% 0.2577 29.23 / 0.502)');
 	});
 
 	test('clamps out-of-range values', () => {
@@ -296,6 +322,11 @@ describe('formatOklch', () => {
 	test('normalizes hue 360 to 0', () => {
 		expect(formatOklch({ l: 0.5, c: 0.1, h: 360 })).toBe('oklch(50% 0.1 0)');
 		expect(formatOklch({ l: 0.5, c: 0.1, h: 720 })).toBe('oklch(50% 0.1 0)');
+	});
+
+	test('clamps alpha to [0, 1]', () => {
+		expect(formatOklch({ l: 0.5, c: 0.1, h: 30, a: -1 })).toBe('oklch(50% 0.1 30 / 0)');
+		expect(formatOklch({ l: 0.5, c: 0.1, h: 30, a: 2 })).toBe('oklch(50% 0.1 30 / 1)');
 	});
 
 	test('no scientific notation for tiny values', () => {

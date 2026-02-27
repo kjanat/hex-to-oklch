@@ -3,7 +3,7 @@
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
  * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RRGGBB`,
- * `#RGBA`, and `#RRGGBBAA` inputs (alpha is discarded).
+ * `#RGBA`, and `#RRGGBBAA` inputs (alpha is preserved when present).
  *
  * @example
  * ```ts
@@ -33,20 +33,45 @@ export type Oklch = {
 	readonly c: number;
 	/** Hue angle in degrees `[0, 360)`. `0` for achromatic colors. */
 	readonly h: number;
+	/** Alpha channel in `[0, 1]` when source input includes transparency. */
+	readonly a?: number;
 };
+
+/**
+ * OKLCH color with alpha channel.
+ *
+ * Alpha uses CSS semantics: `0` = fully transparent, `1` = fully opaque.
+ */
+export type Oklcha = Oklch & {
+	readonly a: number;
+};
+
+type ParsedHex =
+	| {
+		readonly r: number;
+		readonly g: number;
+		readonly b: number;
+	}
+	| {
+		readonly r: number;
+		readonly g: number;
+		readonly b: number;
+		readonly a: number;
+	};
 
 /**
  * Parse a hex color string into sRGB components in the range `[0, 1]`.
  *
  * Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA` with an optional `#`
- * prefix. Alpha channel is silently discarded.
+ * prefix.
  *
  * @param hex - Hex color string to parse.
- * @returns Tuple of `[r, g, b]` in `[0, 1]`.
+ * @returns Parsed color with `r`, `g`, `b` in `[0, 1]` and `a` in
+ *   `[0, 1]` when alpha is present.
  * @throws {Error} If the string contains non-hex characters or has an
  *   unsupported length.
  */
-function parseHex(hex: string): [r: number, g: number, b: number] {
+function parseHex(hex: string): ParsedHex {
 	const s = hex.startsWith('#') ? hex.slice(1) : hex;
 
 	if (!/^[0-9a-f]+$/i.test(s)) {
@@ -54,22 +79,41 @@ function parseHex(hex: string): [r: number, g: number, b: number] {
 	}
 
 	if (s.length === 6 || s.length === 8) {
-		return [
-			parseInt(s.slice(0, 2), 16) / 255,
-			parseInt(s.slice(2, 4), 16) / 255,
-			parseInt(s.slice(4, 6), 16) / 255,
-		];
+		const rgb = {
+			r: parseInt(s.slice(0, 2), 16) / 255,
+			g: parseInt(s.slice(2, 4), 16) / 255,
+			b: parseInt(s.slice(4, 6), 16) / 255,
+		};
+
+		if (s.length === 8) {
+			return {
+				...rgb,
+				a: parseInt(s.slice(6, 8), 16) / 255,
+			};
+		}
+
+		return rgb;
 	}
 
 	if (s.length === 3 || s.length === 4) {
 		const r = s.slice(0, 1);
 		const g = s.slice(1, 2);
 		const b = s.slice(2, 3);
-		return [
-			parseInt(r + r, 16) / 255,
-			parseInt(g + g, 16) / 255,
-			parseInt(b + b, 16) / 255,
-		];
+		const rgb = {
+			r: parseInt(r + r, 16) / 255,
+			g: parseInt(g + g, 16) / 255,
+			b: parseInt(b + b, 16) / 255,
+		};
+
+		if (s.length === 4) {
+			const a = s.slice(3, 4);
+			return {
+				...rgb,
+				a: parseInt(a + a, 16) / 255,
+			};
+		}
+
+		return rgb;
 	}
 
 	throw new Error(`Invalid hex color: ${hex}`);
@@ -118,8 +162,9 @@ function linearSrgbToOklab(
  * Pipeline: hex → sRGB → linear sRGB → OKLab → OKLCH (polar form).
  *
  * @param hex - CSS hex color (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
- *   The `#` prefix is optional. Alpha is discarded.
- * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`.
+ *   The `#` prefix is optional.
+ * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`,
+ *   and `a` in `[0, 1]` when input includes alpha.
  * @throws {Error} If `hex` is not a valid hex color string.
  *
  * @example
@@ -132,7 +177,8 @@ function linearSrgbToOklab(
  * ```
  */
 export function hexToOklch(hex: string): Oklch {
-	const [r, g, b] = parseHex(hex);
+	const parsed = parseHex(hex);
+	const { r, g, b } = parsed;
 	const [L, a, ob] = linearSrgbToOklab(
 		srgbToLinear(r),
 		srgbToLinear(g),
@@ -141,6 +187,11 @@ export function hexToOklch(hex: string): Oklch {
 	const c = Math.sqrt(a * a + ob * ob);
 	// Threshold below perceptual chroma; catches floating-point residuals on achromatics
 	const h = c < 1e-4 ? 0 : ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
+
+	if ('a' in parsed) {
+		return { l: L, c, h, a: parsed.a };
+	}
+
 	return { l: L, c, h };
 }
 
@@ -150,7 +201,7 @@ export function hexToOklch(hex: string): Oklch {
  * Out-of-range values are clamped: `l` to `[0, 1]`, `c` to `[0, +Inf)`,
  * `h` to `[0, 360)`.
  *
- * @param oklch - OKLCH color to format.
+ * @param oklch - OKLCH color to format (with optional alpha).
  * @returns CSS string, e.g. `"oklch(62.8% 0.2577 29.23)"`.
  *
  * @example
@@ -164,9 +215,16 @@ export function hexToOklch(hex: string): Oklch {
  *
  * @see {@link hexToOklch} to produce valid `Oklch` values from hex strings.
  */
-export function formatOklch({ l, c, h }: Oklch): string {
+export function formatOklch(oklch: Oklch): string {
+	const { l, c, h } = oklch;
 	const L = Math.max(0, Math.min(1, l));
 	const C = Math.max(0, c);
 	const H = ((h % 360) + 360) % 360;
+
+	if (oklch.a !== undefined) {
+		const A = Math.max(0, Math.min(1, oklch.a));
+		return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${+H.toFixed(2)} / ${+A.toFixed(3)})`;
+	}
+
 	return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${+H.toFixed(2)})`;
 }
