@@ -3,7 +3,7 @@
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
  * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RRGGBB`,
- * `#RGBA`, and `#RRGGBBAA` inputs (alpha is preserved when present).
+ * `#RGBA`, and `#RRGGBBAA` inputs (alpha preserved by default).
  *
  * @example
  * ```ts
@@ -44,6 +44,17 @@ export type Oklch = {
  */
 export type Oklcha = Oklch & {
 	readonly a: number;
+};
+
+/**
+ * Alpha-handling strategy for {@link hexToOklch}.
+ */
+export type HexToOklchOptions = {
+	/**
+	 * `preserve` (default): include alpha in output when present in input.
+	 * `discard`: always omit alpha from output.
+	 */
+	readonly alpha?: 'preserve' | 'discard';
 };
 
 type ParsedHex =
@@ -163,8 +174,11 @@ function linearSrgbToOklab(
  *
  * @param hex - CSS hex color (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
  *   The `#` prefix is optional.
+ * @param options - Optional conversion settings.
+ * @param options.alpha - Alpha strategy: `preserve` (default) or `discard`.
  * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`,
- *   and `a` in `[0, 1]` when input includes alpha.
+ *   and `a` in `[0, 1]` when input includes alpha and `alpha` is
+ *   `preserve`.
  * @throws {Error} If `hex` is not a valid hex color string.
  *
  * @example
@@ -176,7 +190,10 @@ function linearSrgbToOklab(
  * // { l: 0.5999..., c: ≈0, h: 0 }  — achromatic
  * ```
  */
-export function hexToOklch(hex: string): Oklch {
+export function hexToOklch(
+	hex: string,
+	options?: HexToOklchOptions,
+): Oklch {
 	const parsed = parseHex(hex);
 	const { r, g, b } = parsed;
 	const [L, a, ob] = linearSrgbToOklab(
@@ -188,7 +205,7 @@ export function hexToOklch(hex: string): Oklch {
 	// Threshold below perceptual chroma; catches floating-point residuals on achromatics
 	const h = c < 1e-4 ? 0 : ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
 
-	if ('a' in parsed) {
+	if (options?.alpha !== 'discard' && 'a' in parsed) {
 		return { l: L, c, h, a: parsed.a };
 	}
 

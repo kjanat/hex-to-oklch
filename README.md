@@ -23,10 +23,11 @@ npx hex-to-oklch '#ff6600'
 import { formatOklch, hexToOklch } from 'hex-to-oklch';
 ```
 
-### `hexToOklch(hex: string): Oklch`
+### `hexToOklch(hex: string, options?: HexToOklchOptions): Oklch`
 
 Convert a hex color to OKLCH. Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA`.\
-The `#` prefix is optional. Alpha is preserved as `a` when present in input.
+The `#` prefix is optional. Alpha is preserved as `a` when present in input
+unless `options.alpha` is set to `'discard'`.
 
 Throws on invalid input.
 
@@ -36,6 +37,15 @@ hexToOklch('#ff0000');
 
 hexToOklch('#ff000080');
 // { l: 0.6279..., c: 0.2577..., h: 29.23..., a: 0.5019... }
+
+hexToOklch('#ff000080', { alpha: 'discard' });
+// { l: 0.6279..., c: 0.2577..., h: 29.23... }
+```
+
+```ts
+type HexToOklchOptions = {
+	readonly alpha?: 'preserve' | 'discard'; // default: 'preserve'
+};
 ```
 
 ### `formatOklch(oklch: Oklch): string`
@@ -62,3 +72,5 @@ type Oklch = {
 ```
 
 [OKLCH]: https://bottosson.github.io/posts/oklab/
+
+<!--markdownlint-disable-file no-hard-tabs-->

@@ -66,6 +66,17 @@ describe('parsing', () => {
 		expect(full.a).toBe(1);
 	});
 
+	test('can discard alpha via options', () => {
+		const noAlpha = hexToOklch('#ff0000');
+		const rgbaDiscarded = hexToOklch('#f008', { alpha: 'discard' });
+		const rrggbbaaDiscarded = hexToOklch('#ff000080', { alpha: 'discard' });
+
+		expectOklchClose(rgbaDiscarded, noAlpha);
+		expectOklchClose(rrggbbaaDiscarded, noAlpha);
+		expect(rgbaDiscarded.a).toBeUndefined();
+		expect(rrggbbaaDiscarded.a).toBeUndefined();
+	});
+
 	test('case insensitive', () => {
 		expectOklchClose(hexToOklch('#FF0000'), hexToOklch('#ff0000'));
 		expectOklchClose(hexToOklch('#AaBbCc'), hexToOklch('#aabbcc'));
@@ -289,6 +300,13 @@ describe('invariants', () => {
 		expect(mid.a).toBeCloseTo(128 / 255, 10);
 		expect(full.a).toBe(1);
 		expect(noAlpha.a).toBeUndefined();
+	});
+
+	test('alpha discard option omits alpha for 4/8-digit hex', () => {
+		const rgbaDiscarded = hexToOklch('#1234', { alpha: 'discard' });
+		const rrggbbaaDiscarded = hexToOklch('#11223344', { alpha: 'discard' });
+		expect(rgbaDiscarded.a).toBeUndefined();
+		expect(rrggbbaaDiscarded.a).toBeUndefined();
 	});
 });
 
