@@ -1,0 +1,17 @@
+{
+	"name": "hex-to-oklch",
+	"type": "module",
+	"module": "index.ts",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@typescript/native-preview": "^7.0.0-dev.20260226.1",
+		"dprint": "^0.52.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"scripts": {
+		"fmt": "dprint fmt",
+		"typecheck": "tsgo --noEmit"
+	}
+}
