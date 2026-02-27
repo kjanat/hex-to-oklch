@@ -203,7 +203,7 @@ describe('hexToOklch', () => {
 	});
 
 	describe.concurrent('output invariants', () => {
-		const SAMPLE_HEXES = [
+		const SAMPLE_HEXES = /* dprint-ignore */ [
 			'#000000', '#ffffff', '#808080', '#ff0000', '#00ff00', '#0000ff',
 			'#ffff00', '#00ffff', '#ff00ff', '#010101', '#fefefe', '#123456',
 			'#abcdef', '#fedcba', '#c0ffee', '#bada55', '#663399', '#deface',
@@ -265,12 +265,16 @@ describe('isAchromatic', () => {
 		}
 	});
 
-	test('boundary: chroma exactly at threshold is not achromatic', () => {
-		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD, h: 0 })).toBe(false);
+	test('boundary: chroma exactly at threshold is achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD, h: 0 })).toBe(true);
 	});
 
-	test('boundary: chroma just below threshold is achromatic', () => {
-		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD - 1e-15, h: 180 })).toBe(true);
+	test('boundary: chroma just above threshold is not achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD + 1e-15, h: 180 })).toBe(false);
+	});
+
+	test('strict epsilon: small non-zero chroma above 4e-6 is not achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: 5e-5, h: 210 })).toBe(false);
 	});
 
 	test('negative chroma is achromatic', () => {
@@ -301,6 +305,10 @@ describe('formatOklch', () => {
 			expect(formatOklch(hexToOklch('#808080'))).toBe('oklch(59.99% 0 none)');
 			expect(formatOklch(hexToOklch('#000000'))).toBe('oklch(0% 0 none)');
 			expect(formatOklch(hexToOklch('#ffffff'))).toBe('oklch(100% 0 none)');
+		});
+
+		test('strict epsilon keeps numeric hue for tiny chroma above 4e-6', () => {
+			expect(formatOklch({ l: 0.5, c: 5e-5, h: 210 })).toBe('oklch(50% 0.0001 210)');
 		});
 	});
 

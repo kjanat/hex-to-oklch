@@ -1,6 +1,6 @@
 {
 	"name": "hex-to-oklch",
-	"version": "2.0.0",
+	"version": "3.0.0",
 	"description": "Tiny, zero-dependency hex-to-OKLCH color converter",
 	"keywords": [
 		"hex",
@@ -36,10 +36,10 @@
 		"bd": "tsdown",
 		"bd:watch": "tsdown --watch",
 		"fmt": "dprint fmt",
-		"prepack": "bunx prettier -w README.md >/dev/null",
+		"prepack": "bun --bun bd -l error && bunx prettier -w README.md >/dev/null",
 		"postpack": "git restore README.md >/dev/null",
-		"prepublish": "bun --bun bd",
-		"tar": "TARBALL=$(bun pm pack --quiet | tr -d '\\n'); echo \"tar=${TARBALL}\" >> ${GITHUB_OUTPUT:-/dev/stdout}",
+		"prepublishOnly": "bun test && bun --bun typecheck",
+		"tar": "bun pm pack --quiet | awk 'NF{line=$0} END{print line}'",
 		"test": "bun test",
 		"typecheck": "tsgo --noEmit"
 	},

@@ -39,7 +39,9 @@ jobs:
             core.setOutput('npm_url', `https://www.npmjs.com/package/${name}/v/${version}`)
 
       - id: tarball
-        run: bun run bd && bun run tar
+        run: |
+          TARBALL="$(bun run --silent tar)"
+          echo "tar=${TARBALL}" | tee -a "$GITHUB_OUTPUT"
 
       # bun publish lacks --provenance; use npm for signed provenance
       - run: npm publish --provenance --access public --tag "${NPM_TAG}" "${TARBALL}"

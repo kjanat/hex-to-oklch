@@ -20,7 +20,7 @@
  */
 
 /**
- * Chroma below this value is perceptually achromatic; hue is
+ * Chroma at or below this value is perceptually achromatic; hue is
  * meaningless floating-point noise.
  *
  * Used by {@link hexToOklch} to zero the hue of grays and by
@@ -28,7 +28,7 @@
  *
  * @see {@link https://www.w3.org/TR/css-color-4/#powerless | CSS Color 4 §4.4.1 — “Powerless” Color Components}
  */
-export const ACHROMATIC_CHROMA_THRESHOLD = 1e-4;
+export const ACHROMATIC_CHROMA_THRESHOLD = 4e-6;
 
 /**
  * Whether an OKLCH color is achromatic (a gray without meaningful hue).
@@ -38,11 +38,11 @@ export const ACHROMATIC_CHROMA_THRESHOLD = 1e-4;
  * for floating-point residuals in the sRGB → OKLab conversion.
  *
  * @param oklch - Color to test.
- * @returns `true` when chroma is below the perceptual threshold.
+ * @returns `true` when chroma is at or below the perceptual threshold.
  * @see {@link https://www.w3.org/TR/css-color-4/#powerless | CSS Color 4 §4.4.1 — “Powerless” Color Components}
  */
 export function isAchromatic(oklch: Oklch): boolean {
-	return oklch.c < ACHROMATIC_CHROMA_THRESHOLD;
+	return oklch.c <= ACHROMATIC_CHROMA_THRESHOLD;
 }
 
 /**
