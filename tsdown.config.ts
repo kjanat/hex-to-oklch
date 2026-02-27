@@ -5,6 +5,7 @@ export default defineConfig([{
 	format: ['esm'],
 	dts: true,
 	unbundle: false,
+	clean: true,
 }, {
 	entry: { 'hex-to-oklch': 'src/bin.ts' },
 	format: ['esm'],
@@ -12,4 +13,5 @@ export default defineConfig([{
 	unbundle: true,
 	dts: false,
 	banner: '#!/usr/bin/env node',
+	clean: true,
 }]);

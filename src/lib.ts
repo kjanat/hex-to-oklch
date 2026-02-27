@@ -1,17 +1,50 @@
-/** OKLCH color with lightness, chroma, and hue. */
+/**
+ * Tiny, zero-dependency hex-to-OKLCH color converter.
+ *
+ * Converts CSS hex color strings to the OKLCH perceptual color space
+ * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RRGGBB`,
+ * `#RGBA`, and `#RRGGBBAA` inputs (alpha is discarded).
+ *
+ * @example
+ * ```ts
+ * import { hexToOklch, formatOklch } from "hex-to-oklch";
+ *
+ * const oklch = hexToOklch("#ff6600");
+ * // { l: 0.6958..., c: 0.2043..., h: 43.49... }
+ *
+ * formatOklch(oklch);
+ * // "oklch(69.58% 0.2043 43.49)"
+ * ```
+ *
+ * @module
+ */
+
+/**
+ * OKLCH color with lightness, chroma, and hue.
+ *
+ * Achromatic colors (grays) have chroma near `0` and hue set to `0`
+ * rather than `NaN` — simplifies arithmetic at the cost of not
+ * distinguishing "hue is red" from "hue is powerless".
+ */
 export type Oklch = {
-	/** Lightness (0-1) */
+	/** Perceptual lightness. `0` = black, `1` = white. */
 	readonly l: number;
-	/** Chroma (0+) */
+	/** Chroma (colorfulness). `0` = gray, typically maxes around `0.4`. */
 	readonly c: number;
-	/** Hue in degrees [0, 360). 0 when chroma is below perceptual threshold (achromatic). */
+	/** Hue angle in degrees `[0, 360)`. `0` for achromatic colors. */
 	readonly h: number;
 };
 
 /**
- * Parse a hex color string into sRGB components (0-1).
+ * Parse a hex color string into sRGB components in the range `[0, 1]`.
  *
- * Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA` (alpha is discarded).
+ * Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA` with an optional `#`
+ * prefix. Alpha channel is silently discarded.
+ *
+ * @param hex - Hex color string to parse.
+ * @returns Tuple of `[r, g, b]` in `[0, 1]`.
+ * @throws {Error} If the string contains non-hex characters or has an
+ *   unsupported length.
  */
 function parseHex(hex: string): [r: number, g: number, b: number] {
 	const s = hex.startsWith('#') ? hex.slice(1) : hex;
@@ -29,12 +62,9 @@ function parseHex(hex: string): [r: number, g: number, b: number] {
 	}
 
 	if (s.length === 3 || s.length === 4) {
-		const r = s[0];
-		const g = s[1];
-		const b = s[2];
-		if (r === undefined || g === undefined || b === undefined) {
-			throw new Error(`Invalid hex color: ${hex}`);
-		}
+		const r = s.slice(0, 1);
+		const g = s.slice(1, 2);
+		const b = s.slice(2, 3);
 		return [
 			parseInt(r + r, 16) / 255,
 			parseInt(g + g, 16) / 255,
@@ -45,15 +75,24 @@ function parseHex(hex: string): [r: number, g: number, b: number] {
 	throw new Error(`Invalid hex color: ${hex}`);
 }
 
-/** sRGB gamma decode (sRGB component to linear). */
+/**
+ * sRGB gamma decode per IEC 61966-2-1.
+ *
+ * @param c - sRGB component in `[0, 1]`.
+ * @returns Linear-light value in `[0, 1]`.
+ */
 function srgbToLinear(c: number): number {
 	return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 }
 
 /**
- * Convert linear sRGB to OKLab.
+ * Convert linear sRGB to OKLab via LMS cone-response intermediary.
  *
- * Matrices from Björn Ottosson @see {@link https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab}
+ * @param r - Linear red in `[0, 1]`.
+ * @param g - Linear green in `[0, 1]`.
+ * @param b - Linear blue in `[0, 1]`.
+ * @returns Tuple of `[L, a, b]` in OKLab space.
+ * @see {@link https://bottosson.github.io/posts/oklab/ | Björn Ottosson — A perceptual color space for image processing}
  */
 function linearSrgbToOklab(
 	r: number,
@@ -73,7 +112,25 @@ function linearSrgbToOklab(
 	];
 }
 
-/** Convert a hex color string to OKLCH. Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA`. */
+/**
+ * Convert a hex color string to OKLCH.
+ *
+ * Pipeline: hex → sRGB → linear sRGB → OKLab → OKLCH (polar form).
+ *
+ * @param hex - CSS hex color (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
+ *   The `#` prefix is optional. Alpha is discarded.
+ * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`.
+ * @throws {Error} If `hex` is not a valid hex color string.
+ *
+ * @example
+ * ```ts
+ * hexToOklch("#ff0000");
+ * // { l: 0.6279..., c: 0.2577..., h: 29.23... }
+ *
+ * hexToOklch("#808080");
+ * // { l: 0.5999..., c: ≈0, h: 0 }  — achromatic
+ * ```
+ */
 export function hexToOklch(hex: string): Oklch {
 	const [r, g, b] = parseHex(hex);
 	const [L, a, ob] = linearSrgbToOklab(
@@ -90,7 +147,21 @@ export function hexToOklch(hex: string): Oklch {
 /**
  * Format an OKLCH color as a CSS `oklch()` string.
  *
- * Values are clamped to valid ranges: L to 0-1, C to 0+, H to 0-360.
+ * Out-of-range values are clamped: `l` to `[0, 1]`, `c` to `[0, +Inf)`,
+ * `h` to `[0, 360)`.
+ *
+ * @param oklch - OKLCH color to format.
+ * @returns CSS string, e.g. `"oklch(62.8% 0.2577 29.23)"`.
+ *
+ * @example
+ * ```ts
+ * formatOklch(hexToOklch("#ff0000"));
+ * // "oklch(62.8% 0.2577 29.23)"
+ *
+ * formatOklch({ l: 0, c: 0, h: 0 });
+ * // "oklch(0% 0 0)"
+ * ```
+ *
  * @see {@link hexToOklch} to produce valid `Oklch` values from hex strings.
  */
 export function formatOklch({ l, c, h }: Oklch): string {
