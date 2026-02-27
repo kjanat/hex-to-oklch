@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { formatOklch, hexToOklch } from './index.ts';
 
 const input = process.argv[2];

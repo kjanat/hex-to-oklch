@@ -2,16 +2,18 @@
 
 Tiny, zero-dependency hex-to-[OKLCH](https://bottosson.github.io/posts/oklab/) converter. Library + CLI.
 
+Works with Node.js, Bun, Deno, and any ESM-compatible runtime.
+
 ## Install
 
 ```sh
-bun install hex-to-oklch
+npm install hex-to-oklch
 ```
 
 ## CLI
 
 ```sh
-bunx hex-to-oklch '#ff6600'
+npx hex-to-oklch '#ff6600'
 # oklch(69.58% 0.2043 43.49)
 ```
 
@@ -34,7 +36,7 @@ hexToOklch('#ff0000');
 
 ### `formatOklch(oklch: Oklch): string`
 
-Format an `Oklch` value as a CSS `oklch()` string.
+Format an `Oklch` value as a CSS `oklch()` string. Values are clamped to valid ranges.
 
 ```ts
 formatOklch(hexToOklch('#ff0000'));

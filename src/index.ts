@@ -4,7 +4,7 @@ export type Oklch = {
 	readonly l: number;
 	/** Chroma (0+) */
 	readonly c: number;
-	/** Hue in degrees (0-360), 0 for achromatic colors */
+	/** Hue in degrees [0, 360). 0 when chroma is below perceptual threshold (achromatic). */
 	readonly h: number;
 };
 
