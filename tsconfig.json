@@ -22,7 +22,12 @@
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noPropertyAccessFromIndexSignature": false
+		"noPropertyAccessFromIndexSignature": false,
+
+		// Path aliases
+		"paths": {
+			"hex-to-oklch": ["./src/lib.ts"]
+		}
 	},
 	"exclude": ["dist"]
 }
