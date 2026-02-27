@@ -38,7 +38,7 @@ Format an `Oklch` value as a CSS `oklch()` string.
 
 ```ts
 formatOklch(hexToOklch('#ff0000'));
-// 'oklch(62.79% 0.2577 29.23)'
+// 'oklch(62.8% 0.2577 29.23)'
 ```
 
 ### `Oklch`

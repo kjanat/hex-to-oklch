@@ -86,7 +86,15 @@ export function hexToOklch(hex: string): Oklch {
 	return { l: L, c, h };
 }
 
-/** Format an OKLCH color as a CSS `oklch()` string. */
+/**
+ * Format an OKLCH color as a CSS `oklch()` string.
+ *
+ * Values are clamped to valid ranges: L to 0-1, C to 0+, H to 0-360.
+ * @see {@link hexToOklch} to produce valid `Oklch` values from hex strings.
+ */
 export function formatOklch({ l, c, h }: Oklch): string {
-	return `oklch(${+(l * 100).toFixed(2)}% ${+c.toFixed(4)} ${+h.toFixed(2)})`;
+	const L = Math.max(0, Math.min(1, l));
+	const C = Math.max(0, c);
+	const H = ((h % 360) + 360) % 360;
+	return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${+H.toFixed(2)})`;
 }
