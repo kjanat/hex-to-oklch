@@ -1,5 +1,7 @@
 # hex-to-oklch
 
+[![NPM Version](https://img.shields.io/npm/v/hex-to-oklch?logo=npm&labelColor=CB3837&color=black)](https://www.npmjs.com/package/hex-to-oklch)
+
 Tiny, zero-dependency hex-to-[OKLCH] converter. Library + CLI.
 
 Works with Node.js, Bun, Deno, and any ESM-compatible runtime.
