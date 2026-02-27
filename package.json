@@ -1,7 +1,14 @@
 {
 	"name": "hex-to-oklch",
+	"version": "0.1.0",
 	"type": "module",
 	"module": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
+	"bin": {
+		"hex-to-oklch": "./bin.ts"
+	},
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@typescript/native-preview": "^7.0.0-dev.20260226.1",
