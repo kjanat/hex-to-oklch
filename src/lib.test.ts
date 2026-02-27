@@ -77,6 +77,17 @@ describe('parsing', () => {
 		expect(rrggbbaaDiscarded.a).toBeUndefined();
 	});
 
+	test('can override alpha via options', () => {
+		const noAlpha = hexToOklch('#ff0000');
+		const rgbOverridden = hexToOklch('#ff0000', { alpha: 'override', value: 0.25 });
+		const rgbaOverridden = hexToOklch('#ff000080', { alpha: 'override', value: 0.25 });
+
+		expectOklchClose(rgbOverridden, noAlpha);
+		expectOklchClose(rgbaOverridden, noAlpha);
+		expect(rgbOverridden.a).toBe(0.25);
+		expect(rgbaOverridden.a).toBe(0.25);
+	});
+
 	test('case insensitive', () => {
 		expectOklchClose(hexToOklch('#FF0000'), hexToOklch('#ff0000'));
 		expectOklchClose(hexToOklch('#AaBbCc'), hexToOklch('#aabbcc'));
@@ -307,6 +318,20 @@ describe('invariants', () => {
 		const rrggbbaaDiscarded = hexToOklch('#11223344', { alpha: 'discard' });
 		expect(rgbaDiscarded.a).toBeUndefined();
 		expect(rrggbbaaDiscarded.a).toBeUndefined();
+	});
+
+	test('alpha override clamps to [0, 1]', () => {
+		expect(hexToOklch('#112233', { alpha: 'override', value: -1 }).a).toBe(0);
+		expect(hexToOklch('#112233', { alpha: 'override', value: 2 }).a).toBe(1);
+	});
+
+	test('non-finite alpha override throws', () => {
+		expect(() => hexToOklch('#112233', { alpha: 'override', value: Number.NaN })).toThrow(
+			'Invalid alpha override',
+		);
+		expect(() => hexToOklch('#112233', { alpha: 'override', value: Number.POSITIVE_INFINITY })).toThrow(
+			'Invalid alpha override',
+		);
 	});
 });
 

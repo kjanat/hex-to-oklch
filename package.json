@@ -10,6 +10,10 @@
 		"css",
 		"convert"
 	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kjanat/hex-to-oklch.git"
+	},
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -22,7 +26,7 @@
 		}
 	},
 	"bin": {
-		"hex-to-oklch": "./dist/hex-to-oklch.mjs"
+		"hex-to-oklch": "dist/hex-to-oklch.mjs"
 	},
 	"files": [
 		"dist",
@@ -30,8 +34,12 @@
 	],
 	"scripts": {
 		"bd": "tsdown",
+		"bd:watch": "tsdown --watch",
 		"fmt": "dprint fmt",
-		"prepublishOnly": "bun --bun bd",
+		"prepack": "bunx prettier -w README.md >/dev/null",
+		"postpack": "git restore README.md >/dev/null",
+		"prepublish": "bun --bun bd",
+		"tar": "TARBALL=$(bun pm pack --quiet | tr -d '\\n'); echo \"tar=${TARBALL}\" >> ${GITHUB_OUTPUT:-/dev/stdout}",
 		"test": "bun test",
 		"typecheck": "tsgo --noEmit"
 	},

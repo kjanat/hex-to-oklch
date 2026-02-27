@@ -3,7 +3,7 @@
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
  * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RRGGBB`,
- * `#RGBA`, and `#RRGGBBAA` inputs (alpha preserved by default).
+ * `#RGBA`, and `#RRGGBBAA` inputs (alpha preserved by default, configurable).
  *
  * @example
  * ```ts
@@ -50,11 +50,12 @@ export type Oklcha = Oklch & {
  * Alpha-handling strategy for {@link hexToOklch}.
  */
 export type HexToOklchOptions = {
-	/**
-	 * `preserve` (default): include alpha in output when present in input.
-	 * `discard`: always omit alpha from output.
-	 */
-	readonly alpha?: 'preserve' | 'discard';
+	readonly alpha?: 'preserve';
+} | {
+	readonly alpha: 'discard';
+} | {
+	readonly alpha: 'override';
+	readonly value: number;
 };
 
 type ParsedHex =
@@ -141,6 +142,21 @@ function srgbToLinear(c: number): number {
 }
 
 /**
+ * Clamp alpha override to `[0, 1]` and reject non-finite numbers.
+ *
+ * @param value - Candidate alpha override.
+ * @returns Clamped alpha in `[0, 1]`.
+ * @throws {Error} If `value` is not finite.
+ */
+function normalizeAlphaOverride(value: number): number {
+	if (!Number.isFinite(value)) {
+		throw new Error(`Invalid alpha override: ${value}`);
+	}
+
+	return Math.max(0, Math.min(1, value));
+}
+
+/**
  * Convert linear sRGB to OKLab via LMS cone-response intermediary.
  *
  * @param r - Linear red in `[0, 1]`.
@@ -175,11 +191,16 @@ function linearSrgbToOklab(
  * @param hex - CSS hex color (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
  *   The `#` prefix is optional.
  * @param options - Optional conversion settings.
- * @param options.alpha - Alpha strategy: `preserve` (default) or `discard`.
+ * @param options.alpha - Alpha strategy:
+ *   - `preserve` (default): keep parsed alpha when present
+ *   - `discard`: always omit alpha
+ *   - `override`: always use `options.value` as alpha
+ * @param options.value - Alpha value used when `options.alpha` is `override`.
+ *   Clamped to `[0, 1]`.
  * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`,
- *   and `a` in `[0, 1]` when input includes alpha and `alpha` is
- *   `preserve`.
- * @throws {Error} If `hex` is not a valid hex color string.
+ *   and `a` in `[0, 1]` when alpha is preserved or overridden.
+ * @throws {Error} If `hex` is not a valid hex color string, or if
+ *   `options.alpha` is `override` and `options.value` is non-finite.
  *
  * @example
  * ```ts
@@ -204,12 +225,27 @@ export function hexToOklch(
 	const c = Math.sqrt(a * a + ob * ob);
 	// Threshold below perceptual chroma; catches floating-point residuals on achromatics
 	const h = c < 1e-4 ? 0 : ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
+	const oklch = { l: L, c, h };
 
-	if (options?.alpha !== 'discard' && 'a' in parsed) {
-		return { l: L, c, h, a: parsed.a };
+	if (options?.alpha === 'discard') {
+		return oklch;
 	}
 
-	return { l: L, c, h };
+	if (options?.alpha === 'override') {
+		return {
+			...oklch,
+			a: normalizeAlphaOverride(options.value),
+		};
+	}
+
+	if ('a' in parsed) {
+		return {
+			...oklch,
+			a: parsed.a,
+		};
+	}
+
+	return oklch;
 }
 
 /**

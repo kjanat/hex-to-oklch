@@ -27,7 +27,7 @@ import { formatOklch, hexToOklch } from 'hex-to-oklch';
 
 Convert a hex color to OKLCH. Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA`.\
 The `#` prefix is optional. Alpha is preserved as `a` when present in input
-unless `options.alpha` is set to `'discard'`.
+unless `options.alpha` changes behavior.
 
 Throws on invalid input.
 
@@ -40,12 +40,16 @@ hexToOklch('#ff000080');
 
 hexToOklch('#ff000080', { alpha: 'discard' });
 // { l: 0.6279..., c: 0.2577..., h: 29.23... }
+
+hexToOklch('#ff000080', { alpha: 'override', value: 0.25 });
+// { l: 0.6279..., c: 0.2577..., h: 29.23..., a: 0.25 }
 ```
 
 ```ts
-type HexToOklchOptions = {
-	readonly alpha?: 'preserve' | 'discard'; // default: 'preserve'
-};
+type HexToOklchOptions =
+	| { readonly alpha?: 'preserve' } // default
+	| { readonly alpha: 'discard' }
+	| { readonly alpha: 'override'; readonly value: number }; // clamped to 0..1
 ```
 
 ### `formatOklch(oklch: Oklch): string`
