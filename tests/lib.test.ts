@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Oklch } from 'hex-to-oklch';
-import { formatOklch, hexToOklch } from 'hex-to-oklch';
+import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic } from 'hex-to-oklch';
 
 /** Circular hue distance in degrees (handles wrap-around). */
 function hueDist(a: number, b: number): number {
@@ -174,7 +174,7 @@ describe('hexToOklch', () => {
 	});
 
 	describe.concurrent('achromatic', () => {
-		// CSS Color 4 §12.1: hue is "powerless" when chroma ≈ 0.
+		// CSS Color 4 §4.4.1: hue is "powerless" when chroma ≈ 0.
 		// Our API represents this as h = 0 (not NaN) — documented design choice.
 
 		test('pure grays have C ≈ 0 and h = 0', () => {
@@ -252,29 +252,62 @@ describe('hexToOklch', () => {
 	});
 });
 
+describe('isAchromatic', () => {
+	test('true for pure grays from hexToOklch', () => {
+		for (const hex of ['#000000', '#808080', '#ffffff', '#010101', '#7f7f7f']) {
+			expect(isAchromatic(hexToOklch(hex))).toBe(true);
+		}
+	});
+
+	test('false for chromatic colors', () => {
+		for (const hex of ['#ff0000', '#00ff00', '#0000ff', '#bada55', '#808081']) {
+			expect(isAchromatic(hexToOklch(hex))).toBe(false);
+		}
+	});
+
+	test('boundary: chroma exactly at threshold is not achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD, h: 0 })).toBe(false);
+	});
+
+	test('boundary: chroma just below threshold is achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: ACHROMATIC_CHROMA_THRESHOLD - 1e-15, h: 180 })).toBe(true);
+	});
+
+	test('negative chroma is achromatic', () => {
+		expect(isAchromatic({ l: 0.5, c: -1, h: 0 })).toBe(true);
+	});
+});
+
 describe('formatOklch', () => {
 	describe.concurrent('syntax', () => {
 		test('produces valid CSS oklch() string', () => {
 			const s = formatOklch(hexToOklch('#ff0000'));
-			expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? \d+(\.\d+)?\)$/);
+			expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? (\d+(\.\d+)?|none)\)$/);
 		});
 
 		test('includes alpha with / separator', () => {
 			const s = formatOklch(hexToOklch('#ff000080'));
-			expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? \d+(\.\d+)? \/ \d+(\.\d+)?\)$/);
+			expect(s).toMatch(/^oklch\(\d+(\.\d+)?% \d+(\.\d+)? (\d+(\.\d+)?|none) \/ \d+(\.\d+)?\)$/);
 		});
 
 		test('known outputs', () => {
-			expect(formatOklch(hexToOklch('#000000'))).toBe('oklch(0% 0 0)');
-			expect(formatOklch(hexToOklch('#ffffff'))).toBe('oklch(100% 0 0)');
+			expect(formatOklch(hexToOklch('#000000'))).toBe('oklch(0% 0 none)');
+			expect(formatOklch(hexToOklch('#ffffff'))).toBe('oklch(100% 0 none)');
 			expect(formatOklch(hexToOklch('#ff0000'))).toBe('oklch(62.8% 0.2577 29.23)');
 			expect(formatOklch(hexToOklch('#ff000080'))).toBe('oklch(62.8% 0.2577 29.23 / 0.502)');
+		});
+
+		test('achromatic uses CSS none keyword for hue', () => {
+			expect(formatOklch(hexToOklch('#808080'))).toBe('oklch(59.99% 0 none)');
+			expect(formatOklch(hexToOklch('#000000'))).toBe('oklch(0% 0 none)');
+			expect(formatOklch(hexToOklch('#ffffff'))).toBe('oklch(100% 0 none)');
 		});
 	});
 
 	describe.concurrent('clamping', () => {
 		test('clamps out-of-range values', () => {
-			expect(formatOklch({ l: -0.5, c: -1, h: 400 })).toBe('oklch(0% 0 40)');
+			// Negative chroma is achromatic → hue becomes none
+			expect(formatOklch({ l: -0.5, c: -1, h: 400 })).toBe('oklch(0% 0 none)');
 			expect(formatOklch({ l: 2, c: 0.5, h: -30 })).toBe('oklch(100% 0.5 330)');
 		});
 
@@ -292,14 +325,14 @@ describe('formatOklch', () => {
 	describe.concurrent('edge cases', () => {
 		test('no scientific notation for tiny values', () => {
 			const s = formatOklch({ l: 0.000001, c: 0.000001, h: 0.000001 });
-			expect(s).not.toContain('e');
-			expect(s).toBe('oklch(0% 0 0)');
+			expect(s).not.toMatch(/\de[+-]?\d/);
+			expect(s).toBe('oklch(0% 0 none)');
 		});
 
 		test('no -0 in formatted string', () => {
 			const s = formatOklch({ l: -0, c: -0, h: -0 });
 			expect(s).not.toContain('-0');
-			expect(s).toBe('oklch(0% 0 0)');
+			expect(s).toBe('oklch(0% 0 none)');
 		});
 
 		test('consistent precision', () => {

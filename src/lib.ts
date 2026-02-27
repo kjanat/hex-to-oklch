@@ -20,11 +20,41 @@
  */
 
 /**
+ * Chroma below this value is perceptually achromatic; hue is
+ * meaningless floating-point noise.
+ *
+ * Used by {@link hexToOklch} to zero the hue of grays and by
+ * {@link formatOklch} to emit the CSS `none` keyword for powerless hue.
+ *
+ * @see {@link https://www.w3.org/TR/css-color-4/#powerless | CSS Color 4 §4.4.1 — “Powerless” Color Components}
+ */
+export const ACHROMATIC_CHROMA_THRESHOLD = 1e-4;
+
+/**
+ * Whether an OKLCH color is achromatic (a gray without meaningful hue).
+ *
+ * CSS Color 4 §4.4.1 defines hue as "powerless" when chroma is zero.
+ * This function uses {@link ACHROMATIC_CHROMA_THRESHOLD} to account
+ * for floating-point residuals in the sRGB → OKLab conversion.
+ *
+ * @param oklch - Color to test.
+ * @returns `true` when chroma is below the perceptual threshold.
+ * @see {@link https://www.w3.org/TR/css-color-4/#powerless | CSS Color 4 §4.4.1 — “Powerless” Color Components}
+ */
+export function isAchromatic(oklch: Oklch): boolean {
+	return oklch.c < ACHROMATIC_CHROMA_THRESHOLD;
+}
+
+/**
  * OKLCH color with lightness, chroma, and hue.
  *
  * Achromatic colors (grays) have chroma near `0` and hue set to `0`
  * rather than `NaN` — simplifies arithmetic at the cost of not
- * distinguishing "hue is red" from "hue is powerless".
+ * distinguishing "hue is red" from "hue is powerless". Use
+ * {@link isAchromatic} to detect powerless hue, and
+ * {@link formatOklch} to produce spec-correct CSS with `none`.
+ *
+ * @see {@link https://www.w3.org/TR/css-color-4/#powerless | CSS Color 4 §4.4.1 — “Powerless” Color Components}
  */
 export type Oklch = {
 	/** Perceptual lightness. `0` = black, `1` = white. */
@@ -223,8 +253,9 @@ export function hexToOklch(
 		srgbToLinear(b),
 	);
 	const c = Math.sqrt(a * a + ob * ob);
-	// Threshold below perceptual chroma; catches floating-point residuals on achromatics
-	const h = c < 1e-4 ? 0 : ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
+	const h = c < ACHROMATIC_CHROMA_THRESHOLD
+		? 0
+		: ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
 	const oklch = { l: L, c, h };
 
 	if (options?.alpha === 'discard') {
@@ -251,33 +282,27 @@ export function hexToOklch(
 /**
  * Format an OKLCH color as a CSS `oklch()` string.
  *
+ * Achromatic colors (where {@link isAchromatic} returns `true`) emit
+ * the CSS `none` keyword for hue per CSS Color 4 §4.4, and zero their
+ * chroma: `oklch(60% 0 none)`.
+ *
  * Out-of-range values are clamped: `l` to `[0, 1]`, `c` to `[0, +Inf)`,
  * `h` to `[0, 360)`.
  *
- * @param oklch - OKLCH color to format (with optional alpha).
- * @returns CSS string, e.g. `"oklch(62.8% 0.2577 29.23)"`.
- *
- * @example
- * ```ts
- * formatOklch(hexToOklch("#ff0000"));
- * // "oklch(62.8% 0.2577 29.23)"
- *
- * formatOklch({ l: 0, c: 0, h: 0 });
- * // "oklch(0% 0 0)"
- * ```
- *
  * @see {@link hexToOklch} to produce valid `Oklch` values from hex strings.
+ * @see {@link https://www.w3.org/TR/css-color-4/#missing | CSS Color 4 §4.4 — “Missing” Color Components and the none Keyword}
  */
 export function formatOklch(oklch: Oklch): string {
 	const { l, c, h } = oklch;
 	const L = Math.max(0, Math.min(1, l));
-	const C = Math.max(0, c);
-	const H = ((h % 360) + 360) % 360;
+	const achromatic = isAchromatic(oklch);
+	const C = achromatic ? 0 : Math.max(0, c);
+	const hStr = achromatic ? 'none' : `${+(((h % 360) + 360) % 360).toFixed(2)}`;
 
 	if (oklch.a !== undefined) {
 		const A = Math.max(0, Math.min(1, oklch.a));
-		return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${+H.toFixed(2)} / ${+A.toFixed(3)})`;
+		return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${hStr} / ${+A.toFixed(3)})`;
 	}
 
-	return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${+H.toFixed(2)})`;
+	return `oklch(${+(L * 100).toFixed(2)}% ${+C.toFixed(4)} ${hStr})`;
 }
