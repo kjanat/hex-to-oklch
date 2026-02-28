@@ -1,9 +1,9 @@
 /**
- * Tiny, zero-dependency hex-to-OKLCH color converter.
+ * Tiny, zero-dependency hex color to OKLCH converter.
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
- * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RRGGBB`,
- * `#RGBA`, and `#RRGGBBAA` inputs (alpha preserved by default, configurable).
+ * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RGBA`,
+ * `#RRGGBB`, and `#RRGGBBAA` inputs (alpha preserved by default, configurable).
  *
  * @example
  * ```ts

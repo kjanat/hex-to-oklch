@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://www.schemastore.org/github-workflow.json
+---
+name: Preview release
+run-name: Preview ${{ github.ref_name }}
+on:
+  push: { branches: ["**"] }
+permissions: { contents: read, pull-requests: write }
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run typecheck
+      - run: bun run bd
+        env: { REVISION: "${{ github.sha }}" }
+      - run: bunx pkg-pr-new publish --bun --bin

@@ -1,7 +1,7 @@
 {
 	"name": "hex-to-oklch",
-	"version": "3.0.0",
-	"description": "Tiny, zero-dependency hex-to-OKLCH color converter",
+	"version": "3.1.0",
+	"description": "Tiny, zero-dependency hex color to OKLCH converter.",
 	"keywords": [
 		"hex",
 		"oklch",
@@ -15,27 +15,23 @@
 		"url": "git+https://github.com/kjanat/hex-to-oklch.git"
 	},
 	"license": "MIT",
+	"sideEffects": false,
 	"type": "module",
 	"exports": {
-		".": {
-			"bun": "./src/lib.ts",
-			"import": {
-				"types": "./dist/lib.d.mts",
-				"default": "./dist/lib.mjs"
-			}
-		}
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
 	},
 	"bin": {
 		"hex-to-oklch": "dist/hex-to-oklch.mjs"
 	},
 	"files": [
-		"dist",
-		"src"
+		"dist"
 	],
 	"scripts": {
-		"bd": "tsdown",
-		"bd:watch": "tsdown --watch",
+		"bd": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} tsdown",
+		"bd:watch": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} tsdown --watch",
 		"fmt": "dprint fmt",
+		"hex-to-oklch": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} bun --silent src/cli.ts",
 		"prepack": "bun --bun bd -l error && bunx prettier -w README.md >/dev/null",
 		"postpack": "git restore README.md >/dev/null",
 		"prepublishOnly": "bun test && bun --bun typecheck",
@@ -44,11 +40,22 @@
 		"typecheck": "tsgo --noEmit"
 	},
 	"devDependencies": {
+		"@arethetypeswrong/core": "^0.18.2",
 		"@types/bun": "^1.3.9",
-		"@typescript/native-preview": "^7.0.0-dev.20260226.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260227.1",
 		"dprint": "^0.52.0",
+		"publint": "^0.3.17",
 		"tsdown": "^0.21.0-beta.2",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"unplugin-unused": "^0.5.7"
 	},
-	"packageManager": "bun@1.3.10"
+	"packageManager": "bun@1.3.10",
+	"engines": {
+		"bun": ">=1.3.0",
+		"deno": ">=2.6.0",
+		"node": ">=24.14.0"
+	},
+	"volta": {
+		"node": "25.7.0"
+	}
 }

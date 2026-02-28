@@ -1,8 +1,9 @@
 # hex-to-oklch
 
 [![NPM Version](https://img.shields.io/npm/v/hex-to-oklch?logo=npm&labelColor=CB3837&color=black)](https://www.npmjs.com/package/hex-to-oklch)
+[![pkg.pr.new](https://pkg.pr.new/badge/kjanat/hex-to-oklch)](https://pkg.pr.new/~/kjanat/hex-to-oklch)
 
-Tiny, zero-dependency hex-to-[OKLCH] converter. Library + CLI.
+Tiny, zero-dependency hex color to [OKLCH] converter. Library + CLI.
 
 Works with Node.js, Bun, Deno, and any ESM-compatible runtime.
 
@@ -35,7 +36,7 @@ import {
 
 ### `hexToOklch(hex: string, options?: HexToOklchOptions): Oklch`
 
-Convert a hex color to OKLCH. Accepts `#RGB`, `#RRGGBB`, `#RGBA`, `#RRGGBBAA`.\
+Convert a hex color to OKLCH. Accepts `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`.\
 The `#` prefix is optional. Alpha is preserved as `a` when present in input
 unless `options.alpha` changes behavior.
 
