@@ -19,7 +19,7 @@ const config: UserConfigExport = defineConfig((): UserConfig[] => [
 		attw: { profile: 'esm-only' },
 		publint: true,
 		unused: true,
-		// minify: 'dce-only',
+		minify: true,
 	},
 	{
 		...shared,
@@ -28,7 +28,7 @@ const config: UserConfigExport = defineConfig((): UserConfig[] => [
 		deps: { neverBundle: ['hex-to-oklch', /[\\/]src[\\/]lib\.ts$/] },
 		dts: false,
 		banner: { js: '#!/usr/bin/env node' },
-		// minify: true,
+		minify: true,
 	},
 ]);
 
