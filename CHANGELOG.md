@@ -12,6 +12,14 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Add a new CLI implementation in `src/cli.ts` with `--alpha`, `--help`, `--version`, stdin input via `-`, and multi-input conversion.
 - Add package quality checks with `@arethetypeswrong/core`, `publint`, and `unplugin-unused` in the build pipeline.
 - Add runtime metadata via `engines` and a Volta Node pin.
+- Add continuous preview releases via [pkg.pr.new] on every branch push. Install a preview build
+  directly from a commit SHA without waiting for a release:
+  ```sh
+  # library
+  npm i https://pkg.pr.new/hex-to-oklch@<sha>
+  # CLI (run directly with npx)
+  npx https://pkg.pr.new/hex-to-oklch@<sha> '#ff6600'
+  ```
 
 ### Changed
 
@@ -20,6 +28,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Publish only `dist` artifacts and move CLI source from `src/bin.ts` to `src/cli.ts`.
 - Enable isolated declaration output settings and add `pkg` path alias support in `tsconfig.json`.
 - Refresh README wording for project description and supported hex format order.
+- Enable full minification for both build outputs; `dist/index.mjs` 6.9 kB → 1.8 kB, `dist/hex-to-oklch.mjs` 4.3 kB → 3.0 kB. TypeScript consumers are unaffected — types and JSDoc remain in `dist/index.d.mts`.
 
 ### Fixed
 
@@ -87,6 +96,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [1.0.1]: https://github.com/kjanat/hex-to-oklch/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kjanat/hex-to-oklch/compare/v1.0.0-rc.0...v1.0.0
 [1.0.0-rc.0]: https://github.com/kjanat/hex-to-oklch/releases/tag/v1.0.0-rc.0
+[pkg.pr.new]: https://pkg.pr.new
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
 
