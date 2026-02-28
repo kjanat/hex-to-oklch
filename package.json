@@ -29,7 +29,7 @@
 	],
 	"scripts": {
 		"bd": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} tsdown",
-		"bd:watch": "REVISION=$(git rev-parse --short HEAD) tsdown --watch",
+		"bd:watch": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} tsdown --watch",
 		"fmt": "dprint fmt",
 		"hex-to-oklch": "REVISION=${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} bun --silent src/cli.ts",
 		"prepack": "bun --bun bd -l error && bunx prettier -w README.md >/dev/null",

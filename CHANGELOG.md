@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Enable isolated declaration output settings and add `pkg` path alias support in `tsconfig.json`.
 - Refresh README wording for project description and supported hex format order.
 
+### Fixed
+
+- Fix CLI hanging when `-` (stdin) is passed multiple times by reading stdin once and reusing.
+- Fix `bd:watch` script missing git-revision fallback, matching the pattern used by other scripts.
+- Fix duplicate period in `src/lib.ts` module doc comment.
+
 ### Removed
 
 - Remove the legacy `src/bin.ts` CLI entrypoint.

@@ -118,9 +118,11 @@ async function printHelp(): Promise<void> {
 
 async function runInputs(inputs: string[], options: HexToOklchOptions): Promise<boolean> {
 	let ok = true;
+	let stdinLines: string[] | undefined;
 	for (const input of inputs) {
 		if (input === '-') {
-			for (const hex of await readStdin()) {
+			stdinLines ??= await readStdin();
+			for (const hex of stdinLines) {
 				if (!convert(hex, options)) ok = false;
 			}
 			continue;
