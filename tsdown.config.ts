@@ -1,17 +1,35 @@
-import { defineConfig } from 'tsdown';
+import { defineConfig, type UserConfig, type UserConfigExport } from 'tsdown';
 
-export default defineConfig([{
-	entry: { lib: 'src/lib.ts' },
-	format: ['esm'],
-	dts: true,
-	unbundle: false,
+const REVISION = process.env.REVISION ?? 'dev';
+
+const shared = {
+	format: 'esm' as const,
+	define: { 'process.env.REVISION': JSON.stringify(REVISION) },
 	clean: true,
-}, {
-	entry: { 'hex-to-oklch': 'src/bin.ts' },
-	format: ['esm'],
-	treeshake: true,
-	unbundle: true,
-	dts: false,
-	banner: '#!/usr/bin/env node',
-	clean: true,
-}]);
+	fixedExtension: true,
+};
+
+const config: UserConfigExport = defineConfig((): UserConfig[] => [
+	{
+		...shared,
+		entry: { index: 'src/lib.ts' },
+		platform: 'neutral',
+		exports: true,
+		dts: { enabled: true, newContext: true, sideEffects: false },
+		attw: { profile: 'esm-only' },
+		publint: true,
+		unused: true,
+		// minify: 'dce-only',
+	},
+	{
+		...shared,
+		entry: { 'hex-to-oklch': 'src/cli.ts' },
+		platform: 'node',
+		deps: { neverBundle: ['hex-to-oklch', /[\\/]src[\\/]lib\.ts$/] },
+		dts: false,
+		banner: { js: '#!/usr/bin/env node' },
+		// minify: true,
+	},
+]);
+
+export default config;

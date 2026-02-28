@@ -24,9 +24,14 @@
 		"noUnusedParameters": true,
 		"noPropertyAccessFromIndexSignature": false,
 
+		// Isolated
+		"isolatedDeclarations": true,
+		"declaration": true,
+
 		// Path aliases
 		"paths": {
-			"hex-to-oklch": ["./src/lib.ts"]
+			"hex-to-oklch": ["./src/lib.ts"],
+			"pkg": ["./package.json"]
 		}
 	},
 	"exclude": ["dist"]

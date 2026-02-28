@@ -9,6 +9,21 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Added
 
 - Add `CHANGELOG.md` using Keep a Changelog format with retroactive release entries.
+- Add a new CLI implementation in `src/cli.ts` with `--alpha`, `--help`, `--version`, stdin input via `-`, and multi-input conversion.
+- Add package quality checks with `@arethetypeswrong/core`, `publint`, and `unplugin-unused` in the build pipeline.
+- Add runtime metadata via `engines` and a Volta Node pin.
+
+### Changed
+
+- Update package exports to `dist/index.mjs`, expose `./package.json`, and mark the package as `sideEffects: false`.
+- Rework build scripts and `tsdown` config to inject revision metadata and split library and CLI output targets.
+- Publish only `dist` artifacts and move CLI source from `src/bin.ts` to `src/cli.ts`.
+- Enable isolated declaration output settings and add `pkg` path alias support in `tsconfig.json`.
+- Refresh README wording for project description and supported hex format order.
+
+### Removed
+
+- Remove the legacy `src/bin.ts` CLI entrypoint.
 
 ## [3.0.0] - 2026-02-27
 
