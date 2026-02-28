@@ -1,6 +1,7 @@
 # hex-to-oklch
 
 [![NPM Version](https://img.shields.io/npm/v/hex-to-oklch?logo=npm&labelColor=CB3837&color=black)](https://www.npmjs.com/package/hex-to-oklch)
+[![pkg.pr.new](https://pkg.pr.new/badge/kjanat/hex-to-oklch)](https://pkg.pr.new/~/kjanat/hex-to-oklch)
 
 Tiny, zero-dependency hex color to [OKLCH] converter. Library + CLI.
 
