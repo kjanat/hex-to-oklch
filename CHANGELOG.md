@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-02-28
+
 ### Added
 
 - Add `CHANGELOG.md` using Keep a Changelog format with retroactive release entries.
@@ -90,7 +92,8 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Add runtime-agnostic packaging and `tsdown`-based build pipeline.
 - Add README API docs, JSDoc improvements, expanded tests, and project licensing.
 
-[Unreleased]: https://github.com/kjanat/hex-to-oklch/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/kjanat/hex-to-oklch/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/kjanat/hex-to-oklch/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/kjanat/hex-to-oklch/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/kjanat/hex-to-oklch/compare/v1.0.1...v2.0.0
 [1.0.1]: https://github.com/kjanat/hex-to-oklch/compare/v1.0.0...v1.0.1
