@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://www.schemastore.org/github-workflow.json
+---
+name: Runtime compat
+run-name: Runtimes · ${{ github.ref_name }}
+on:
+  push: { branches: ["**"] }
+  pull_request:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - id: pack
+        uses: actions/github-script@v8
+        env:
+          REVISION: ${{ github.sha }}
+        with:
+          result-encoding: string
+          script: |
+            await exec.exec('bun', ['run', 'bd'])
+            const { stdout } = await exec.getExecOutput('bun', ['run', '--silent', 'tar'])
+            const tarball = stdout.trim()
+            core.info(`tarball: ${tarball}`)
+            return tarball
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tarball
+          path: ${{ steps.pack.outputs.result }}
+          retention-days: 1
+
+  node:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with: { name: tarball }
+      - uses: actions/setup-node@v6
+        with: { node-version: "24" }
+      - run: npm install ./*.tgz
+      - run: npx hex-to-oklch '#ff0000'
+      - name: Assert output
+        run: |
+          out="$(npx hex-to-oklch '#ff0000')"
+          [ "$out" = "oklch(62.8% 0.2577 29.23)" ]
+
+  bun:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with: { name: tarball }
+      - uses: oven-sh/setup-bun@v2
+      - run: bun add ./*.tgz
+      - run: bunx --bun --no-install hex-to-oklch '#ff0000'
+      - name: Assert output
+        run: |
+          out="$(bunx --bun --no-install hex-to-oklch '#ff0000')"
+          [ "$out" = "oklch(62.8% 0.2577 29.23)" ]
+
+  deno:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with: { name: tarball }
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: "2.x" }
+      - run: npm install ./*.tgz
+      - run: deno run -A node_modules/hex-to-oklch/dist/hex-to-oklch.mjs '#ff0000'
+      - name: Assert output
+        run: |
+          out="$(deno run -A node_modules/hex-to-oklch/dist/hex-to-oklch.mjs '#ff0000')"
+          [ "$out" = "oklch(62.8% 0.2577 29.23)" ]

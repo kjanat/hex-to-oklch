@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [Unreleased]
 
+### Added
+
+- CI runtime-compat workflow: smoke-tests the packed tarball on Node, Bun, and Deno to verify the README's runtime claims.
+
 ### Changed
 
 - Publish workflow: strict tag pattern, `bun i -g npm`, rely on `prepublishOnly` for test+typecheck gate
