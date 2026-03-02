@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [Unreleased]
 
+### Changed
+
+- Publish workflow: strict tag pattern, `bun i -g npm`, rely on `prepublishOnly` for test+typecheck gate
+
 ## [3.1.0] - 2026-02-28
 
 ### Added
