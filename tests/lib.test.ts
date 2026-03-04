@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Oklch } from 'hex-to-oklch';
-import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic } from 'hex-to-oklch';
+import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic, rgbToOklch } from 'hex-to-oklch';
 
 /** Circular hue distance in degrees (handles wrap-around). */
 function hueDist(a: number, b: number): number {
@@ -248,6 +248,85 @@ describe('hexToOklch', () => {
 				expect(Object.is(c, -0)).toBe(false);
 				expect(Object.is(h, -0)).toBe(false);
 			}
+		});
+	});
+});
+
+describe('rgbToOklch', () => {
+	describe.concurrent('equivalence with hexToOklch', () => {
+		const cases: Array<[hex: string, r: number, g: number, b: number]> = [
+			['#000000', 0, 0, 0],
+			['#ffffff', 255, 255, 255],
+			['#ff0000', 255, 0, 0],
+			['#00ff00', 0, 255, 0],
+			['#0000ff', 0, 0, 255],
+			['#808080', 128, 128, 128],
+			['#bada55', 186, 218, 85],
+			['#663399', 102, 51, 153],
+			['#c0ffee', 192, 255, 238],
+		];
+
+		test.each(cases)('%s matches rgbToOklch(%d, %d, %d)', (hex, r, g, b) => {
+			const fromHex = hexToOklch(hex);
+			const fromRgb = rgbToOklch(r, g, b);
+			expect(fromRgb.l).toBe(fromHex.l);
+			expect(fromRgb.c).toBe(fromHex.c);
+			expect(fromRgb.h).toBe(fromHex.h);
+			expect(fromRgb.a).toBeUndefined();
+		});
+	});
+
+	describe.concurrent('alpha', () => {
+		test('no alpha by default', () => {
+			expect(rgbToOklch(255, 0, 0).a).toBeUndefined();
+		});
+
+		test('alpha is included when provided', () => {
+			const o = rgbToOklch(255, 0, 0, 0.5);
+			expect(o.a).toBe(0.5);
+		});
+
+		test('alpha is clamped to [0, 1]', () => {
+			expect(rgbToOklch(0, 0, 0, -1).a).toBe(0);
+			expect(rgbToOklch(0, 0, 0, 2).a).toBe(1);
+		});
+
+		test('non-finite alpha throws', () => {
+			expect(() => rgbToOklch(0, 0, 0, Number.NaN)).toThrow('Invalid alpha override');
+			expect(() => rgbToOklch(0, 0, 0, Number.POSITIVE_INFINITY)).toThrow('Invalid alpha override');
+		});
+	});
+
+	describe.concurrent('clamping and rounding', () => {
+		test('values are clamped to [0, 255]', () => {
+			expectOklchClose(rgbToOklch(-10, 0, 0), rgbToOklch(0, 0, 0));
+			expectOklchClose(rgbToOklch(300, 255, 255), rgbToOklch(255, 255, 255));
+		});
+
+		test('fractional values are rounded', () => {
+			expectOklchClose(rgbToOklch(127.6, 128.4, 128), rgbToOklch(128, 128, 128));
+		});
+	});
+
+	describe.concurrent('validation', () => {
+		test('non-finite values throw', () => {
+			expect(() => rgbToOklch(Number.NaN, 0, 0)).toThrow('Invalid RGB values');
+			expect(() => rgbToOklch(0, Number.POSITIVE_INFINITY, 0)).toThrow('Invalid RGB values');
+			expect(() => rgbToOklch(0, 0, Number.NEGATIVE_INFINITY)).toThrow('Invalid RGB values');
+		});
+	});
+
+	describe.concurrent('golden vectors', () => {
+		const vectors: Array<[r: number, g: number, b: number, label: string, expected: { l: number; c: number; h: number }]> = [
+			[0, 0, 0, 'black', { l: 0, c: 0, h: 0 }],
+			[255, 255, 255, 'white', { l: 1, c: 0, h: 0 }],
+			[255, 0, 0, 'red', { l: 0.62796, c: 0.25768, h: 29.2339 }],
+			[0, 255, 0, 'green', { l: 0.86644, c: 0.29483, h: 142.4953 }],
+			[0, 0, 255, 'blue', { l: 0.45201, c: 0.31321, h: 264.052 }],
+		];
+
+		test.each(vectors)('(%d, %d, %d) %s', (r, g, b, _label, expected) => {
+			expectOklchClose(rgbToOklch(r, g, b), expected);
 		});
 	});
 });
