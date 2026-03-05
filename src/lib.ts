@@ -343,7 +343,7 @@ export function rgbToOklch(
 	b?: number,
 	alpha?: number,
 ): Oklch {
-	if (typeof rOrRgb === 'object') {
+	if (rOrRgb !== null && typeof rOrRgb === 'object') {
 		return rgbToOklch(rOrRgb.r, rOrRgb.g, rOrRgb.b, rOrRgb.a);
 	}
 
