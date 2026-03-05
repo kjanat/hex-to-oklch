@@ -1,4 +1,4 @@
-import { formatOklch, hexToOklch, type HexToOklchOptions } from 'hex-to-oklch';
+import { formatOklch, hexToOklch, type HexToOklchOptions, oklchToHex, type Oklch } from 'hex-to-oklch';
 import { createInterface } from 'node:readline';
 import { bin, name, version } from 'pkg';
 
@@ -8,22 +8,24 @@ function firstKey<T extends Record<string, unknown>>(obj: T): string | undefined
 
 const commandName = firstKey(bin) ?? name;
 
-const USAGE = `Usage: ${commandName} [options] <hex|->...`;
+const USAGE = `Usage: ${commandName} [options] <hex|oklch|->...`;
 const HELP_DETAILS = `\
-Convert one or more hex colors to OKLCH.
-Pass \`-\` to read hex values from stdin, one per line.
+Convert one or more hex colors to OKLCH, or OKLCH back to hex.
+Pass \`-\` to read values from stdin, one per line.
 
 Arguments:
-  <hex>    #RGB, #RGBA, #RRGGBB, or #RRGGBBAA
-           (\`#\` optional)
+  <hex>      #RGB, #RGBA, #RRGGBB, or #RRGGBBAA
+             (\`#\` optional)
+  <oklch>    CSS oklch() string (with --to-hex)
 
 Options:
-  --alpha <strategy>    Alpha handling (default: preserve)
-                          preserve   keep alpha from input
-                          discard    strip alpha channel
-                          <0–1>      override with fixed value
-  -V, --version         Print version and exit
-  -h, --help            Print this help and exit
+  --to-hex                Convert OKLCH to hex (reverse mode)
+  --alpha <strategy>      Alpha handling (default: preserve)
+                            preserve   keep alpha from input
+                            discard    strip alpha channel
+                            <0–1>      override with fixed value
+  -V, --version           Print version and exit
+  -h, --help              Print this help and exit
 
 Examples:
   hex-to-oklch '#ff6600'
@@ -41,12 +43,19 @@ Examples:
   # oklch(69.58% 0.2043 43.49 / 0.5)
 
   echo '#ff6600' | hex-to-oklch -
-  # oklch(69.58% 0.2043 43.49)`;
+  # oklch(69.58% 0.2043 43.49)
+
+  hex-to-oklch --to-hex 'oklch(69.58% 0.2043 43.49)'
+  # #ff6600
+
+  hex-to-oklch --to-hex 'oklch(62.8% 0.2577 29.23 / 0.502)'
+  # #ff000080`;
 
 type ParseResult =
 	| { kind: 'help' }
 	| { kind: 'version' }
-	| { kind: 'run'; inputs: string[]; options: HexToOklchOptions };
+	| { kind: 'run'; inputs: string[]; options: HexToOklchOptions }
+	| { kind: 'to-hex'; inputs: string[] };
 
 class CliInputError extends Error {
 	constructor(
@@ -76,6 +85,7 @@ ${HELP_DETAILS}`;
 
 function parseArgs(argv: string[]): ParseResult {
 	let options: HexToOklchOptions = {};
+	let toHex = false;
 	const inputs: string[] = [];
 
 	for (let i = 0; i < argv.length; i++) {
@@ -89,6 +99,9 @@ function parseArgs(argv: string[]): ParseResult {
 			case '--version':
 			case '-V':
 				return { kind: 'version' };
+			case '--to-hex':
+				toHex = true;
+				continue;
 			case '--alpha': {
 				const value = argv[++i];
 				if (value === undefined) throw new CliInputError('--alpha requires a value');
@@ -107,13 +120,68 @@ function parseArgs(argv: string[]): ParseResult {
 		}
 	}
 
-	if (inputs.length === 0) throw new CliInputError('missing <hex>', true);
+	if (inputs.length === 0) {
+		throw new CliInputError(toHex ? 'missing <oklch>' : 'missing <hex>', true);
+	}
+
+	if (toHex) return { kind: 'to-hex', inputs };
 	return { kind: 'run', inputs, options };
 }
 
 async function printHelp(): Promise<void> {
 	const revision = await resolveRevision();
 	console.log(buildHelpText(revision));
+}
+
+/**
+ * Parse a CSS `oklch()` string into an {@link Oklch} object.
+ *
+ * Accepts formats like:
+ * - `oklch(62.8% 0.2577 29.23)`
+ * - `oklch(62.8% 0.2577 29.23 / 0.5)`
+ * - `oklch(50% 0 none)`
+ *
+ * @param input - CSS oklch() string.
+ * @returns Parsed OKLCH color.
+ * @throws {Error} If the string is not a valid oklch() expression.
+ */
+export function parseOklchString(input: string): Oklch {
+	const s = input.trim();
+	const match = s.match(
+		/^oklch\(\s*([0-9.]+)%\s+([0-9.]+)\s+(none|[0-9.]+)(?:\s*\/\s*([0-9.]+))?\s*\)$/,
+	);
+	if (!match) {
+		throw new Error(`Invalid oklch() string: ${input}`);
+	}
+
+	const l = parseFloat(match[1]!) / 100;
+	const c = parseFloat(match[2]!);
+	const h = match[3] === 'none' ? 0 : parseFloat(match[3]!);
+
+	if (!Number.isFinite(l) || !Number.isFinite(c) || !Number.isFinite(h)) {
+		throw new Error(`Invalid oklch() values: ${input}`);
+	}
+
+	if (match[4] !== undefined) {
+		const a = parseFloat(match[4]);
+		if (!Number.isFinite(a)) {
+			throw new Error(`Invalid oklch() alpha: ${input}`);
+		}
+		return { l, c, h, a };
+	}
+
+	return { l, c, h };
+}
+
+function convertToHex(input: string): boolean {
+	try {
+		const oklch = parseOklchString(input);
+		console.log(oklchToHex(oklch));
+		return true;
+	} catch (e) {
+		console.error(e instanceof Error ? e.message : String(e));
+		return false;
+	}
 }
 
 async function runInputs(inputs: string[], options: HexToOklchOptions): Promise<boolean> {
@@ -133,6 +201,23 @@ async function runInputs(inputs: string[], options: HexToOklchOptions): Promise<
 	return ok;
 }
 
+async function runToHex(inputs: string[]): Promise<boolean> {
+	let ok = true;
+	let stdinLines: string[] | undefined;
+	for (const input of inputs) {
+		if (input === '-') {
+			stdinLines ??= await readStdin();
+			for (const line of stdinLines) {
+				if (!convertToHex(line)) ok = false;
+			}
+			continue;
+		}
+
+		if (!convertToHex(input)) ok = false;
+	}
+	return ok;
+}
+
 async function main(argv: string[]): Promise<number> {
 	try {
 		const parsed = parseArgs(argv);
@@ -144,6 +229,11 @@ async function main(argv: string[]): Promise<number> {
 		if (parsed.kind === 'version') {
 			console.log(version);
 			return 0;
+		}
+
+		if (parsed.kind === 'to-hex') {
+			const ok = await runToHex(parsed.inputs);
+			return ok ? 0 : 1;
 		}
 
 		const ok = await runInputs(parsed.inputs, parsed.options);

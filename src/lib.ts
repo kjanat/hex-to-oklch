@@ -372,6 +372,101 @@ export function rgbToOklch(
 }
 
 /**
+ * Linear-light value to sRGB gamma encode per IEC 61966-2-1.
+ *
+ * Inverse of {@link srgbToLinear}.
+ *
+ * @param c - Linear-light component in `[0, 1]`.
+ * @returns sRGB component in `[0, 1]`.
+ */
+function linearToSrgb(c: number): number {
+	return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+}
+
+/**
+ * Convert OKLab to linear sRGB via LMS cone-response intermediary.
+ *
+ * Inverse of {@link linearSrgbToOklab}.
+ *
+ * @param L - OKLab lightness.
+ * @param a - OKLab green-red axis.
+ * @param b - OKLab blue-yellow axis.
+ * @returns Tuple of `[r, g, b]` in linear sRGB (may be outside `[0, 1]` for out-of-gamut colors).
+ * @see {@link https://bottosson.github.io/posts/oklab/ | Björn Ottosson — A perceptual color space for image processing}
+ */
+function oklabToLinearSrgb(
+	L: number,
+	a: number,
+	b: number,
+): [r: number, g: number, b: number] {
+	// OKLab → LMS (cubed roots)
+	const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+	const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+	const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+	const l = l_ * l_ * l_;
+	const m = m_ * m_ * m_;
+	const s = s_ * s_ * s_;
+
+	// LMS → linear sRGB
+	return [
+		+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+		-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+		-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+	];
+}
+
+/**
+ * Convert an OKLCH color back to a hex string.
+ *
+ * Pipeline: OKLCH (polar) → OKLab → linear sRGB → sRGB → hex.
+ *
+ * Out-of-gamut sRGB values are clamped to `[0, 255]`.
+ *
+ * @param oklch - OKLCH color to convert.
+ * @returns Hex color string in `#rrggbb` or `#rrggbbaa` format.
+ *   Alpha is included only when the input has an `a` property.
+ *
+ * @example
+ * ```ts
+ * import { hexToOklch, oklchToHex } from "hex-to-oklch";
+ *
+ * oklchToHex({ l: 0.6279, c: 0.2577, h: 29.23 });
+ * // "#ff0000"
+ *
+ * // Roundtrip
+ * oklchToHex(hexToOklch("#bada55"));
+ * // "#bada55"
+ * ```
+ */
+export function oklchToHex(oklch: Oklch): string {
+	const { l, c, h } = oklch;
+
+	// OKLCH → OKLab
+	const hRad = (h * Math.PI) / 180;
+	const a = c * Math.cos(hRad);
+	const b = c * Math.sin(hRad);
+
+	// OKLab → linear sRGB → sRGB → 0-255
+	const [lr, lg, lb] = oklabToLinearSrgb(l, a, b);
+	const r = Math.max(0, Math.min(255, Math.round(linearToSrgb(lr) * 255)));
+	const g = Math.max(0, Math.min(255, Math.round(linearToSrgb(lg) * 255)));
+	const bv = Math.max(0, Math.min(255, Math.round(linearToSrgb(lb) * 255)));
+
+	const rHex = r.toString(16).padStart(2, '0');
+	const gHex = g.toString(16).padStart(2, '0');
+	const bHex = bv.toString(16).padStart(2, '0');
+
+	if (oklch.a !== undefined) {
+		const av = Math.max(0, Math.min(255, Math.round(oklch.a * 255)));
+		const aHex = av.toString(16).padStart(2, '0');
+		return `#${rHex}${gHex}${bHex}${aHex}`;
+	}
+
+	return `#${rHex}${gHex}${bHex}`;
+}
+
+/**
  * Format an OKLCH color as a CSS `oklch()` string.
  *
  * Achromatic colors (where {@link isAchromatic} returns `true`) emit

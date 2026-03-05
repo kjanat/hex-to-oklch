@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Oklch } from 'hex-to-oklch';
-import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic, rgbToOklch } from 'hex-to-oklch';
+import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic, oklchToHex, rgbToOklch } from 'hex-to-oklch';
 
 /** Circular hue distance in degrees (handles wrap-around). */
 function hueDist(a: number, b: number): number {
@@ -531,5 +531,110 @@ describe('formatOklch', () => {
 				expect((hStr ?? '').split('.')[1]?.length ?? 0).toBeLessThanOrEqual(2);
 			}
 		});
+	});
+});
+
+describe('oklchToHex', () => {
+	describe.concurrent('basic conversions', () => {
+		test('black', () => {
+			expect(oklchToHex({ l: 0, c: 0, h: 0 })).toBe('#000000');
+		});
+
+		test('white', () => {
+			expect(oklchToHex({ l: 1, c: 0, h: 0 })).toBe('#ffffff');
+		});
+
+		test('red', () => {
+			expect(oklchToHex(hexToOklch('#ff0000'))).toBe('#ff0000');
+		});
+
+		test('green', () => {
+			expect(oklchToHex(hexToOklch('#00ff00'))).toBe('#00ff00');
+		});
+
+		test('blue', () => {
+			expect(oklchToHex(hexToOklch('#0000ff'))).toBe('#0000ff');
+		});
+	});
+
+	describe.concurrent('alpha handling', () => {
+		test('includes alpha when present', () => {
+			const hex = oklchToHex({ l: 0.5, c: 0.1, h: 30, a: 0.5 });
+			expect(hex).toMatch(/^#[0-9a-f]{8}$/);
+		});
+
+		test('omits alpha when absent', () => {
+			const hex = oklchToHex({ l: 0.5, c: 0.1, h: 30 });
+			expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+		});
+
+		test('alpha 0 produces 00 suffix', () => {
+			expect(oklchToHex({ l: 0.5, c: 0, h: 0, a: 0 })).toMatch(/00$/);
+		});
+
+		test('alpha 1 produces ff suffix', () => {
+			expect(oklchToHex({ l: 0.5, c: 0, h: 0, a: 1 })).toMatch(/ff$/);
+		});
+	});
+
+	describe.concurrent('out-of-gamut clamping', () => {
+		test('clamps negative sRGB to 0', () => {
+			// Very saturated color that may go out of gamut
+			const hex = oklchToHex({ l: 0.5, c: 0.4, h: 264 });
+			expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+		});
+
+		test('clamps sRGB above 255', () => {
+			const hex = oklchToHex({ l: 1, c: 0.3, h: 90 });
+			expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+		});
+	});
+
+	describe.concurrent('output format', () => {
+		test('always lowercase hex', () => {
+			const hex = oklchToHex(hexToOklch('#ABCDEF'));
+			expect(hex).toBe(hex.toLowerCase());
+		});
+
+		test('always 6 or 8 characters after #', () => {
+			const hex6 = oklchToHex({ l: 0.5, c: 0.1, h: 30 });
+			const hex8 = oklchToHex({ l: 0.5, c: 0.1, h: 30, a: 0.5 });
+			expect(hex6.length).toBe(7); // # + 6
+			expect(hex8.length).toBe(9); // # + 8
+		});
+	});
+});
+
+describe('roundtrip hex → oklch → hex', () => {
+	const ROUNDTRIP_HEXES = /* dprint-ignore */ [
+		'#000000', '#ffffff', '#808080', '#ff0000', '#00ff00', '#0000ff',
+		'#ffff00', '#00ffff', '#ff00ff', '#010101', '#fefefe', '#123456',
+		'#abcdef', '#fedcba', '#c0ffee', '#bada55', '#663399', '#deface',
+		'#7f7f7f', '#080808', '#112233', '#aabbcc', '#334455', '#99ccff',
+	];
+
+	test.each(ROUNDTRIP_HEXES)('%s roundtrips exactly', (hex) => {
+		expect(oklchToHex(hexToOklch(hex))).toBe(hex);
+	});
+
+	test('roundtrip with alpha', () => {
+		const hexes = ['#ff000080', '#00ff0040', '#0000ffff', '#12345600', '#abcdefcc'];
+		for (const hex of hexes) {
+			expect(oklchToHex(hexToOklch(hex))).toBe(hex);
+		}
+	});
+
+	test('roundtrip via rgbToOklch', () => {
+		const cases: Array<[number, number, number]> = [
+			[0, 0, 0], [255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255],
+			[128, 128, 128], [186, 218, 85], [102, 51, 153],
+		];
+
+		for (const [r, g, b] of cases) {
+			const oklch = rgbToOklch(r, g, b);
+			const hex = oklchToHex(oklch);
+			const expected = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+			expect(hex).toBe(expected);
+		}
 	});
 });
