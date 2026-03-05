@@ -6,9 +6,16 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [Unreleased]
 
+## [3.2.0] - TBD
+
 ### Added
 
+- Add `rgbToOklch(r, g, b, alpha?)` export for direct RGB-to-OKLCH conversion without a hex string intermediary. Accepts channel values in `[0, 255]` (clamped and rounded) with an optional alpha in `[0, 1]`.
 - CI runtime-compat workflow: smoke-tests the packed tarball on Node, Bun, and Deno to verify the README's runtime claims.
+
+### Fixed
+
+- Fix achromatic boundary inconsistency: the hue calculation in the conversion core now uses `<=` against `ACHROMATIC_CHROMA_THRESHOLD`, matching `isAchromatic()`.
 
 ### Changed
 
@@ -100,7 +107,8 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Add runtime-agnostic packaging and `tsdown`-based build pipeline.
 - Add README API docs, JSDoc improvements, expanded tests, and project licensing.
 
-[Unreleased]: https://github.com/kjanat/hex-to-oklch/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/kjanat/hex-to-oklch/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/kjanat/hex-to-oklch/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/kjanat/hex-to-oklch/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/kjanat/hex-to-oklch/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/kjanat/hex-to-oklch/compare/v1.0.1...v2.0.0
