@@ -32,9 +32,10 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Add runtime metadata via `engines` and a Volta Node pin.
 - Add continuous preview releases via [pkg.pr.new] on every branch push. Install a preview build
   directly from a commit SHA without waiting for a release:
+
   ```sh
   # library
-  npm i https://pkg.pr.new/hex-to-oklch@<sha>
+  npm i https://pkg.pr.new/hex-to-oklch@<sha|pr>
   # CLI (run directly with npx)
   npx https://pkg.pr.new/hex-to-oklch@<sha> '#ff6600'
   ```

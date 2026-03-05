@@ -1,5 +1,5 @@
 /**
- * Tiny, zero-dependency hex color to OKLCH converter.
+ * Tiny, zero-dependency hex/RGB color to OKLCH converter.
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
  * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RGBA`,
@@ -349,11 +349,11 @@ export function rgbToOklch(
 
 	const r = rOrRgb;
 	if (
-		g === undefined ||
-		b === undefined ||
-		!Number.isFinite(r) ||
-		!Number.isFinite(g) ||
-		!Number.isFinite(b)
+		g === undefined
+		|| b === undefined
+		|| !Number.isFinite(r)
+		|| !Number.isFinite(g)
+		|| !Number.isFinite(b)
 	) {
 		throw new Error(`Invalid RGB values: ${r}, ${g}, ${b}`);
 	}

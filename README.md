@@ -3,7 +3,7 @@
 [![NPM Version](https://img.shields.io/npm/v/hex-to-oklch?logo=npm&labelColor=CB3837&color=black)](https://www.npmjs.com/package/hex-to-oklch)
 [![pkg.pr.new](https://pkg.pr.new/badge/kjanat/hex-to-oklch)](https://pkg.pr.new/~/kjanat/hex-to-oklch)
 
-Tiny, zero-dependency hex color to [OKLCH] converter. Library + CLI.
+Tiny, zero-dependency hex/RGB color to [OKLCH] converter. Library + CLI.
 
 Works with Node.js, Bun, Deno, and any ESM-compatible runtime.
 
@@ -30,6 +30,7 @@ import {
 	formatOklch,
 	hexToOklch,
 	isAchromatic,
+	rgbToOklch,
 } from 'hex-to-oklch';
 ```
 <!-- dprint-ignore-end -->
@@ -64,6 +65,37 @@ type HexToOklchOptions =
 	| { readonly alpha?: 'preserve' } // default
 	| { readonly alpha: 'discard' }
 	| { readonly alpha: 'override'; readonly value: number }; // clamped to 0..1
+```
+
+### `rgbToOklch(r, g, b, alpha?): Oklch` · `rgbToOklch(rgb: RgbInput): Oklch`
+
+Convert raw RGB values to OKLCH. Channels are integers in `[0, 255]`
+(clamped and rounded). Optional alpha in `[0, 1]`.
+
+Accepts positional arguments or a single `RgbInput` object.
+Throws on non-finite `r`, `g`, `b`, or `alpha`.
+
+```ts
+rgbToOklch(255, 0, 0);
+// { l: 0.6279..., c: 0.2577..., h: 29.23... }
+
+rgbToOklch(255, 0, 0, 0.5);
+// { l: 0.6279..., c: 0.2577..., h: 29.23..., a: 0.5 }
+
+rgbToOklch({ r: 128, g: 128, b: 128 });
+// { l: 0.5999..., c: ~0, h: 0 } // achromatic
+
+formatOklch(rgbToOklch(186, 218, 85));
+// 'oklch(83.91% 0.1622 121.45)'
+```
+
+```ts
+type RgbInput = {
+	readonly r: number; // [0, 255]
+	readonly g: number; // [0, 255]
+	readonly b: number; // [0, 255]
+	readonly a?: number; // [0, 1]
+};
 ```
 
 ### `formatOklch(oklch: Oklch): string`

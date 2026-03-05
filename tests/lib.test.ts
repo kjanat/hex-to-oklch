@@ -286,6 +286,10 @@ describe('rgbToOklch', () => {
 			expect(o.a).toBe(0.5);
 		});
 
+		test('alpha zero is preserved, not treated as absent', () => {
+			expect(rgbToOklch(0, 0, 0, 0).a).toBe(0);
+		});
+
 		test('alpha is clamped to [0, 1]', () => {
 			expect(rgbToOklch(0, 0, 0, -1).a).toBe(0);
 			expect(rgbToOklch(0, 0, 0, 2).a).toBe(1);
@@ -306,6 +310,10 @@ describe('rgbToOklch', () => {
 		test('fractional values are rounded', () => {
 			expectOklchClose(rgbToOklch(127.6, 128.4, 128), rgbToOklch(128, 128, 128));
 		});
+
+		test('255.5 rounds to 256 then clamps to 255', () => {
+			expectOklchClose(rgbToOklch(255.5, 0, 0), rgbToOklch(255, 0, 0));
+		});
 	});
 
 	describe.concurrent('validation', () => {
@@ -317,7 +325,9 @@ describe('rgbToOklch', () => {
 	});
 
 	describe.concurrent('golden vectors', () => {
-		const vectors: Array<[r: number, g: number, b: number, label: string, expected: { l: number; c: number; h: number }]> = [
+		const vectors: Array<
+			[r: number, g: number, b: number, label: string, expected: { l: number; c: number; h: number }]
+		> = [
 			[0, 0, 0, 'black', { l: 0, c: 0, h: 0 }],
 			[255, 255, 255, 'white', { l: 1, c: 0, h: 0 }],
 			[255, 0, 0, 'red', { l: 0.62796, c: 0.25768, h: 29.2339 }],
@@ -352,6 +362,67 @@ describe('rgbToOklch', () => {
 
 		test('non-finite values in object throw', () => {
 			expect(() => rgbToOklch({ r: Number.NaN, g: 0, b: 0 })).toThrow('Invalid RGB values');
+		});
+
+		test('object form clamps and rounds', () => {
+			expectOklchClose(
+				rgbToOklch({ r: 300, g: -10, b: 127.6 }),
+				rgbToOklch(255, 0, 128),
+			);
+		});
+	});
+
+	describe.concurrent('output invariants', () => {
+		const SAMPLES: Array<[number, number, number]> = [
+			[0, 0, 0],
+			[255, 255, 255],
+			[128, 128, 128],
+			[255, 0, 0],
+			[0, 255, 0],
+			[0, 0, 255],
+			[1, 1, 1],
+			[254, 254, 254],
+			[186, 218, 85],
+		];
+
+		test('l is in [0, 1] for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l } = rgbToOklch(r, g, b);
+				expect(l).toBeGreaterThanOrEqual(0);
+				expect(l).toBeLessThanOrEqual(1.0001);
+			}
+		});
+
+		test('c >= 0 for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				expect(rgbToOklch(r, g, b).c).toBeGreaterThanOrEqual(0);
+			}
+		});
+
+		test('h is in [0, 360) for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { h } = rgbToOklch(r, g, b);
+				expect(h).toBeGreaterThanOrEqual(0);
+				expect(h).toBeLessThan(360);
+			}
+		});
+
+		test('all outputs are finite', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l, c, h } = rgbToOklch(r, g, b);
+				expect(Number.isFinite(l)).toBe(true);
+				expect(Number.isFinite(c)).toBe(true);
+				expect(Number.isFinite(h)).toBe(true);
+			}
+		});
+
+		test('no -0 in output', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l, c, h } = rgbToOklch(r, g, b);
+				expect(Object.is(l, -0)).toBe(false);
+				expect(Object.is(c, -0)).toBe(false);
+				expect(Object.is(h, -0)).toBe(false);
+			}
 		});
 	});
 });
