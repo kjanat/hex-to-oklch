@@ -290,9 +290,24 @@ export function hexToOklch(
 }
 
 /**
+ * RGB color input for {@link rgbToOklch}.
+ *
+ * Channels are integers in `[0, 255]` (clamped and rounded). Alpha, when
+ * present, is in `[0, 1]` (clamped).
+ */
+export type RgbInput = {
+	readonly r: number;
+	readonly g: number;
+	readonly b: number;
+	readonly a?: number;
+};
+
+/**
  * Convert raw RGB values to OKLCH.
  *
  * Pipeline: sRGB `[0, 255]` → normalized `[0, 1]` → linear sRGB → OKLab → OKLCH.
+ *
+ * Accepts either positional arguments or a single {@link RgbInput} object.
  *
  * @param r - Red channel in `[0, 255]`. Clamped to `[0, 255]` and rounded.
  * @param g - Green channel in `[0, 255]`. Clamped to `[0, 255]` and rounded.
@@ -308,25 +323,39 @@ export function hexToOklch(
  * ```ts
  * import { rgbToOklch, formatOklch } from "hex-to-oklch";
  *
+ * // Positional arguments
  * rgbToOklch(255, 0, 0);
  * // { l: 0.6279..., c: 0.2577..., h: 29.23... }
  *
- * rgbToOklch(255, 102, 0, 0.5);
+ * // Object form
+ * rgbToOklch({ r: 255, g: 102, b: 0, a: 0.5 });
  * // { l: 0.6958..., c: 0.2043..., h: 43.49..., a: 0.5 }
  *
  * formatOklch(rgbToOklch(128, 128, 128));
  * // "oklch(59.99% 0 none)"
  * ```
  */
-export function rgbToOklch(r: number, g: number, b: number, alpha?: number): Oklch {
+export function rgbToOklch(r: number, g: number, b: number, alpha?: number): Oklch;
+export function rgbToOklch(rgb: RgbInput): Oklch;
+export function rgbToOklch(
+	rOrRgb: number | RgbInput,
+	g?: number,
+	b?: number,
+	alpha?: number,
+): Oklch {
+	if (typeof rOrRgb === 'object') {
+		return rgbToOklch(rOrRgb.r, rOrRgb.g, rOrRgb.b, rOrRgb.a);
+	}
+
+	const r = rOrRgb;
 	if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
 		throw new Error(`Invalid RGB values: ${r}, ${g}, ${b}`);
 	}
 
 	const oklch = srgbToOklchCore(
 		Math.max(0, Math.min(255, Math.round(r))) / 255,
-		Math.max(0, Math.min(255, Math.round(g))) / 255,
-		Math.max(0, Math.min(255, Math.round(b))) / 255,
+		Math.max(0, Math.min(255, Math.round(g!))) / 255,
+		Math.max(0, Math.min(255, Math.round(b!))) / 255,
 	);
 
 	if (alpha !== undefined) {

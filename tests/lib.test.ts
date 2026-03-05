@@ -329,6 +329,31 @@ describe('rgbToOklch', () => {
 			expectOklchClose(rgbToOklch(r, g, b), expected);
 		});
 	});
+
+	describe.concurrent('object overload', () => {
+		test('object form matches positional form', () => {
+			const positional = rgbToOklch(186, 218, 85);
+			const object = rgbToOklch({ r: 186, g: 218, b: 85 });
+			expect(object.l).toBe(positional.l);
+			expect(object.c).toBe(positional.c);
+			expect(object.h).toBe(positional.h);
+			expect(object.a).toBeUndefined();
+		});
+
+		test('alpha from object', () => {
+			const o = rgbToOklch({ r: 255, g: 0, b: 0, a: 0.5 });
+			expect(o.a).toBe(0.5);
+			expectOklchClose(o, rgbToOklch(255, 0, 0));
+		});
+
+		test('alpha omitted from object', () => {
+			expect(rgbToOklch({ r: 0, g: 0, b: 0 }).a).toBeUndefined();
+		});
+
+		test('non-finite values in object throw', () => {
+			expect(() => rgbToOklch({ r: Number.NaN, g: 0, b: 0 })).toThrow('Invalid RGB values');
+		});
+	});
 });
 
 describe('isAchromatic', () => {

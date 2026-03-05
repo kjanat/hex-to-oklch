@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Added
 
 - Add `rgbToOklch(r, g, b, alpha?)` export for direct RGB-to-OKLCH conversion without a hex string intermediary. Accepts channel values in `[0, 255]` (clamped and rounded) with an optional alpha in `[0, 1]`.
+- `rgbToOklch` now also accepts an `RgbInput` object (`{ r, g, b, a? }`) as an alternative to positional arguments.
 - CI runtime-compat workflow: smoke-tests the packed tarball on Node, Bun, and Deno to verify the README's runtime claims.
 
 ### Fixed
