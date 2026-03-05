@@ -226,7 +226,7 @@ function srgbToOklchCore(r: number, g: number, b: number): { l: number; c: numbe
 		srgbToLinear(b),
 	);
 	const c = Math.sqrt(a * a + ob * ob);
-	const h = c < ACHROMATIC_CHROMA_THRESHOLD
+	const h = c <= ACHROMATIC_CHROMA_THRESHOLD
 		? 0
 		: ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
 	return { l: L, c, h };
