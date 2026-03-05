@@ -1,5 +1,5 @@
 /**
- * Tiny, zero-dependency hex color to OKLCH converter.
+ * Tiny, zero-dependency hex/RGB color to OKLCH converter.
  *
  * Converts CSS hex color strings to the OKLCH perceptual color space
  * using Björn Ottosson's OKLab matrices. Supports `#RGB`, `#RGBA`,
@@ -214,6 +214,25 @@ function linearSrgbToOklab(
 }
 
 /**
+ * Convert sRGB components in `[0, 1]` to OKLCH.
+ *
+ * Shared conversion core used by both {@link hexToOklch} and
+ * {@link rgbToOklch}. Pipeline: sRGB → linear sRGB → OKLab → OKLCH.
+ */
+function srgbToOklchCore(r: number, g: number, b: number): { l: number; c: number; h: number } {
+	const [L, a, ob] = linearSrgbToOklab(
+		srgbToLinear(r),
+		srgbToLinear(g),
+		srgbToLinear(b),
+	);
+	const c = Math.sqrt(a * a + ob * ob);
+	const h = c <= ACHROMATIC_CHROMA_THRESHOLD
+		? 0
+		: ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
+	return { l: L, c, h };
+}
+
+/**
  * Convert a hex color string to OKLCH.
  *
  * Pipeline: hex → sRGB → linear sRGB → OKLab → OKLCH (polar form).
@@ -247,16 +266,7 @@ export function hexToOklch(
 ): Oklch {
 	const parsed = parseHex(hex);
 	const { r, g, b } = parsed;
-	const [L, a, ob] = linearSrgbToOklab(
-		srgbToLinear(r),
-		srgbToLinear(g),
-		srgbToLinear(b),
-	);
-	const c = Math.sqrt(a * a + ob * ob);
-	const h = c < ACHROMATIC_CHROMA_THRESHOLD
-		? 0
-		: ((Math.atan2(ob, a) * 180) / Math.PI + 360) % 360;
-	const oklch = { l: L, c, h };
+	const oklch = srgbToOklchCore(r, g, b);
 
 	if (options?.alpha === 'discard') {
 		return oklch;
@@ -274,6 +284,88 @@ export function hexToOklch(
 			...oklch,
 			a: parsed.a,
 		};
+	}
+
+	return oklch;
+}
+
+/**
+ * RGB color input for {@link rgbToOklch}.
+ *
+ * Channels are integers in `[0, 255]` (clamped and rounded). Alpha, when
+ * present, is in `[0, 1]` (clamped).
+ */
+export type RgbInput = {
+	readonly r: number;
+	readonly g: number;
+	readonly b: number;
+	readonly a?: number;
+};
+
+/**
+ * Convert raw RGB values to OKLCH.
+ *
+ * Pipeline: sRGB `[0, 255]` → normalized `[0, 1]` → linear sRGB → OKLab → OKLCH.
+ *
+ * Accepts either positional arguments or a single {@link RgbInput} object.
+ *
+ * @param r - Red channel in `[0, 255]`. Clamped to `[0, 255]` and rounded.
+ * @param g - Green channel in `[0, 255]`. Clamped to `[0, 255]` and rounded.
+ * @param b - Blue channel in `[0, 255]`. Clamped to `[0, 255]` and rounded.
+ * @param alpha - Optional alpha in `[0, 1]`. When provided, the result
+ *   includes an `a` property. Clamped to `[0, 1]`.
+ * @returns OKLCH color with `l` in `[0, 1]`, `c >= 0`, `h` in `[0, 360)`,
+ *   and `a` in `[0, 1]` when `alpha` is provided.
+ * @throws {Error} If any of `r`, `g`, `b` is not a finite number, or if
+ *   `alpha` is provided and not finite.
+ *
+ * @example
+ * ```ts
+ * import { rgbToOklch, formatOklch } from "hex-to-oklch";
+ *
+ * // Positional arguments
+ * rgbToOklch(255, 0, 0);
+ * // { l: 0.6279..., c: 0.2577..., h: 29.23... }
+ *
+ * // Object form
+ * rgbToOklch({ r: 255, g: 102, b: 0, a: 0.5 });
+ * // { l: 0.6958..., c: 0.2043..., h: 43.49..., a: 0.5 }
+ *
+ * formatOklch(rgbToOklch(128, 128, 128));
+ * // "oklch(59.99% 0 none)"
+ * ```
+ */
+export function rgbToOklch(r: number, g: number, b: number, alpha?: number): Oklch;
+export function rgbToOklch(rgb: RgbInput): Oklch;
+export function rgbToOklch(
+	rOrRgb: number | RgbInput,
+	g?: number,
+	b?: number,
+	alpha?: number,
+): Oklch {
+	if (rOrRgb !== null && typeof rOrRgb === 'object') {
+		return rgbToOklch(rOrRgb.r, rOrRgb.g, rOrRgb.b, rOrRgb.a);
+	}
+
+	const r = rOrRgb;
+	if (
+		g === undefined
+		|| b === undefined
+		|| !Number.isFinite(r)
+		|| !Number.isFinite(g)
+		|| !Number.isFinite(b)
+	) {
+		throw new Error(`Invalid RGB values: ${r}, ${g}, ${b}`);
+	}
+
+	const oklch = srgbToOklchCore(
+		Math.max(0, Math.min(255, Math.round(r))) / 255,
+		Math.max(0, Math.min(255, Math.round(g))) / 255,
+		Math.max(0, Math.min(255, Math.round(b))) / 255,
+	);
+
+	if (alpha !== undefined) {
+		return { ...oklch, a: normalizeAlphaOverride(alpha) };
 	}
 
 	return oklch;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Oklch } from 'hex-to-oklch';
-import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic } from 'hex-to-oklch';
+import { ACHROMATIC_CHROMA_THRESHOLD, formatOklch, hexToOklch, isAchromatic, rgbToOklch } from 'hex-to-oklch';
 
 /** Circular hue distance in degrees (handles wrap-around). */
 function hueDist(a: number, b: number): number {
@@ -244,6 +244,181 @@ describe('hexToOklch', () => {
 		test('no -0 in output', () => {
 			for (const hex of SAMPLE_HEXES) {
 				const { l, c, h } = hexToOklch(hex);
+				expect(Object.is(l, -0)).toBe(false);
+				expect(Object.is(c, -0)).toBe(false);
+				expect(Object.is(h, -0)).toBe(false);
+			}
+		});
+	});
+});
+
+describe('rgbToOklch', () => {
+	describe.concurrent('equivalence with hexToOklch', () => {
+		const cases: Array<[hex: string, r: number, g: number, b: number]> = [
+			['#000000', 0, 0, 0],
+			['#ffffff', 255, 255, 255],
+			['#ff0000', 255, 0, 0],
+			['#00ff00', 0, 255, 0],
+			['#0000ff', 0, 0, 255],
+			['#808080', 128, 128, 128],
+			['#bada55', 186, 218, 85],
+			['#663399', 102, 51, 153],
+			['#c0ffee', 192, 255, 238],
+		];
+
+		test.each(cases)('%s matches rgbToOklch(%d, %d, %d)', (hex, r, g, b) => {
+			const fromHex = hexToOklch(hex);
+			const fromRgb = rgbToOklch(r, g, b);
+			expect(fromRgb.l).toBe(fromHex.l);
+			expect(fromRgb.c).toBe(fromHex.c);
+			expect(fromRgb.h).toBe(fromHex.h);
+			expect(fromRgb.a).toBeUndefined();
+		});
+	});
+
+	describe.concurrent('alpha', () => {
+		test('no alpha by default', () => {
+			expect(rgbToOklch(255, 0, 0).a).toBeUndefined();
+		});
+
+		test('alpha is included when provided', () => {
+			const o = rgbToOklch(255, 0, 0, 0.5);
+			expect(o.a).toBe(0.5);
+		});
+
+		test('alpha zero is preserved, not treated as absent', () => {
+			expect(rgbToOklch(0, 0, 0, 0).a).toBe(0);
+		});
+
+		test('alpha is clamped to [0, 1]', () => {
+			expect(rgbToOklch(0, 0, 0, -1).a).toBe(0);
+			expect(rgbToOklch(0, 0, 0, 2).a).toBe(1);
+		});
+
+		test('non-finite alpha throws', () => {
+			expect(() => rgbToOklch(0, 0, 0, Number.NaN)).toThrow('Invalid alpha override');
+			expect(() => rgbToOklch(0, 0, 0, Number.POSITIVE_INFINITY)).toThrow('Invalid alpha override');
+		});
+	});
+
+	describe.concurrent('clamping and rounding', () => {
+		test('values are clamped to [0, 255]', () => {
+			expectOklchClose(rgbToOklch(-10, 0, 0), rgbToOklch(0, 0, 0));
+			expectOklchClose(rgbToOklch(300, 255, 255), rgbToOklch(255, 255, 255));
+		});
+
+		test('fractional values are rounded', () => {
+			expectOklchClose(rgbToOklch(127.6, 128.4, 128), rgbToOklch(128, 128, 128));
+		});
+
+		test('255.5 rounds to 256 then clamps to 255', () => {
+			expectOklchClose(rgbToOklch(255.5, 0, 0), rgbToOklch(255, 0, 0));
+		});
+	});
+
+	describe.concurrent('validation', () => {
+		test('non-finite values throw', () => {
+			expect(() => rgbToOklch(Number.NaN, 0, 0)).toThrow('Invalid RGB values');
+			expect(() => rgbToOklch(0, Number.POSITIVE_INFINITY, 0)).toThrow('Invalid RGB values');
+			expect(() => rgbToOklch(0, 0, Number.NEGATIVE_INFINITY)).toThrow('Invalid RGB values');
+		});
+	});
+
+	describe.concurrent('golden vectors', () => {
+		const vectors: Array<
+			[r: number, g: number, b: number, label: string, expected: { l: number; c: number; h: number }]
+		> = [
+			[0, 0, 0, 'black', { l: 0, c: 0, h: 0 }],
+			[255, 255, 255, 'white', { l: 1, c: 0, h: 0 }],
+			[255, 0, 0, 'red', { l: 0.62796, c: 0.25768, h: 29.2339 }],
+			[0, 255, 0, 'green', { l: 0.86644, c: 0.29483, h: 142.4953 }],
+			[0, 0, 255, 'blue', { l: 0.45201, c: 0.31321, h: 264.052 }],
+		];
+
+		test.each(vectors)('(%d, %d, %d) %s', (r, g, b, _label, expected) => {
+			expectOklchClose(rgbToOklch(r, g, b), expected);
+		});
+	});
+
+	describe.concurrent('object overload', () => {
+		test('object form matches positional form', () => {
+			const positional = rgbToOklch(186, 218, 85);
+			const object = rgbToOklch({ r: 186, g: 218, b: 85 });
+			expect(object.l).toBe(positional.l);
+			expect(object.c).toBe(positional.c);
+			expect(object.h).toBe(positional.h);
+			expect(object.a).toBeUndefined();
+		});
+
+		test('alpha from object', () => {
+			const o = rgbToOklch({ r: 255, g: 0, b: 0, a: 0.5 });
+			expect(o.a).toBe(0.5);
+			expectOklchClose(o, rgbToOklch(255, 0, 0));
+		});
+
+		test('alpha omitted from object', () => {
+			expect(rgbToOklch({ r: 0, g: 0, b: 0 }).a).toBeUndefined();
+		});
+
+		test('non-finite values in object throw', () => {
+			expect(() => rgbToOklch({ r: Number.NaN, g: 0, b: 0 })).toThrow('Invalid RGB values');
+		});
+
+		test('object form clamps and rounds', () => {
+			expectOklchClose(
+				rgbToOklch({ r: 300, g: -10, b: 127.6 }),
+				rgbToOklch(255, 0, 128),
+			);
+		});
+	});
+
+	describe.concurrent('output invariants', () => {
+		const SAMPLES: Array<[number, number, number]> = [
+			[0, 0, 0],
+			[255, 255, 255],
+			[128, 128, 128],
+			[255, 0, 0],
+			[0, 255, 0],
+			[0, 0, 255],
+			[1, 1, 1],
+			[254, 254, 254],
+			[186, 218, 85],
+		];
+
+		test('l is in [0, 1] for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l } = rgbToOklch(r, g, b);
+				expect(l).toBeGreaterThanOrEqual(0);
+				expect(l).toBeLessThanOrEqual(1.0001);
+			}
+		});
+
+		test('c >= 0 for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				expect(rgbToOklch(r, g, b).c).toBeGreaterThanOrEqual(0);
+			}
+		});
+
+		test('h is in [0, 360) for all colors', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { h } = rgbToOklch(r, g, b);
+				expect(h).toBeGreaterThanOrEqual(0);
+				expect(h).toBeLessThan(360);
+			}
+		});
+
+		test('all outputs are finite', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l, c, h } = rgbToOklch(r, g, b);
+				expect(Number.isFinite(l)).toBe(true);
+				expect(Number.isFinite(c)).toBe(true);
+				expect(Number.isFinite(h)).toBe(true);
+			}
+		});
+
+		test('no -0 in output', () => {
+			for (const [r, g, b] of SAMPLES) {
+				const { l, c, h } = rgbToOklch(r, g, b);
 				expect(Object.is(l, -0)).toBe(false);
 				expect(Object.is(c, -0)).toBe(false);
 				expect(Object.is(h, -0)).toBe(false);
