@@ -348,14 +348,20 @@ export function rgbToOklch(
 	}
 
 	const r = rOrRgb;
-	if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+	if (
+		g === undefined ||
+		b === undefined ||
+		!Number.isFinite(r) ||
+		!Number.isFinite(g) ||
+		!Number.isFinite(b)
+	) {
 		throw new Error(`Invalid RGB values: ${r}, ${g}, ${b}`);
 	}
 
 	const oklch = srgbToOklchCore(
 		Math.max(0, Math.min(255, Math.round(r))) / 255,
-		Math.max(0, Math.min(255, Math.round(g!))) / 255,
-		Math.max(0, Math.min(255, Math.round(b!))) / 255,
+		Math.max(0, Math.min(255, Math.round(g))) / 255,
+		Math.max(0, Math.min(255, Math.round(b))) / 255,
 	);
 
 	if (alpha !== undefined) {
